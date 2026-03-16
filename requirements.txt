@@ -1,0 +1,30 @@
+# Core
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+pydantic==2.5.0
+
+# Crypto
+cryptography==41.0.7
+
+# Face Recognition (stable combo)
+tensorflow==2.12.0
+deepface==0.0.79
+opencv-python==4.8.1.78
+Pillow==9.5.0
+numpy==1.23.5
+
+# Fingerprint
+pyfingerprint==1.5
+pyserial==3.5
+
+# Utilities
+rich==13.7.0
+python-magic==0.4.27
+requests==2.31.0
+
+# Frontend
+streamlit==1.28.2
+
+# Data
+pandas==2.0.3
