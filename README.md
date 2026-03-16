@@ -201,7 +201,7 @@ QKD_Multimodal_Secure_Communication/
 ## 👥 Contributors
 *   **Sandeep Rishi J B**
 *   **Rishikesh C**
-*   **Rithish Anto A**
+*   **Rithishanto A**
 *   **Shivam Kumar M**
 
 ## 🆘 Support
