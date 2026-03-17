@@ -15,7 +15,6 @@ import tempfile
 import streamlit as st
 from PIL import Image
 import numpy as np
-import streamlit.components.v1 as components
 
 # Page config
 st.set_page_config(
@@ -152,16 +151,12 @@ def get_enrollment_status(identity):
         st.error(f"Cannot check enrollment: {e}")
         return None
 
-def authenticate(identity, auth_mode, simulate_eavesdrop=False):
+def authenticate(identity, auth_mode):
     """Call backend authentication"""
     try:
         response = requests.post(
             f"{API_BASE}/authenticate",
-            json={
-                "identity": identity, 
-                "mode": auth_mode.lower(),
-                "simulate_eavesdrop": simulate_eavesdrop
-            },
+            json={"identity": identity, "mode": auth_mode},
             timeout=60
         )
         return response.json()
@@ -296,7 +291,7 @@ def show_enrollment_section():
         
         identity = st.radio(
             "Select Identity to Enroll:",
-            ["Sender", "Receiver"],
+            ["sender", "receiver"],
             horizontal=True,
             key="enroll_identity_select"
         )
@@ -444,105 +439,6 @@ def show_enrollment_section():
                 reset_enrollment_state()
                 return_to_main_app()
 
-def show_continuous_auth_widget():
-    """Show continuous face authentication HTML component"""
-    
-
-    html_code = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{ font-family: sans-serif; margin: 0; padding: 10px; background-color: #f0f2f6; border-radius: 8px; }}
-            #video-container {{ display: flex; flex-direction: column; align-items: center; justify-content: center; }}
-            video {{ border-radius: 8px; max-width: 100%; height: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 10px; }}
-            #status-badge {{ padding: 5px 15px; border-radius: 20px; color: white; font-weight: bold; font-size: 14px; text-align: center; }}
-            .status-checking {{ background-color: #f39c12; }}
-            .status-success {{ background-color: #2ecc71; }}
-            .status-fail {{ background-color: #e74c3c; }}
-            #logs {{ margin-top: 10px; font-size: 12px; color: #666; max-height: 100px; overflow-y: auto; width: 100%; }}
-        </style>
-    </head>
-    <body>
-        <div id="video-container">
-            <video id="video" width="240" height="180" autoplay playsinline></video>
-            <div id="status-badge" class="status-checking">Initializing Camera...</div>
-            <div id="logs"></div>
-            <canvas id="canvas" width="240" height="180" style="display:none;"></canvas>
-        </div>
-        <script>
-            const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
-            const statusBadge = document.getElementById('status-badge');
-            const logs = document.getElementById('logs');
-            const backendUrl = "{API_BASE}";
-            const identity = "{st.session_state.identity}";
-            
-            function log(msg) {{
-                const d = new Date();
-                const timeStr = d.toLocaleTimeString();
-                logs.innerHTML = `<div>[${{timeStr}}] ${{msg}}</div>` + logs.innerHTML;
-            }}
-
-            async function startCamera() {{
-                try {{
-                    const stream = await navigator.mediaDevices.getUserMedia({{ video: true }});
-                    video.srcObject = stream;
-                    statusBadge.textContent = "Authenticating...";
-                    statusBadge.className = "status-checking";
-                    log("Camera started - will capture every 5 seconds");
-                    
-                    // Initial capture
-                    setTimeout(captureAndAuthenticate, 2000);
-                    // Start capture interval
-                    setInterval(captureAndAuthenticate, 5000);
-                }} catch (err) {{
-                    statusBadge.textContent = "Camera Error";
-                    statusBadge.className = "status-fail";
-                    log("Error accessing camera: " + err.message);
-                }}
-            }}
-
-            async function captureAndAuthenticate() {{
-                if (!video.srcObject) return;
-                
-                const context = canvas.getContext('2d');
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const imageData = canvas.toDataURL('image/jpeg', 0.8);
-                
-                try {{
-                    const response = await fetch(`${{backendUrl}}/authenticate/continuous`, {{
-                        method: 'POST',
-                        headers: {{ 'Content-Type': 'application/json' }},
-                        body: JSON.stringify({{ identity: identity, image: imageData }})
-                    }});
-                    
-                    const result = await response.json();
-                    if (result.success) {{
-                        statusBadge.textContent = "✅ Authenticated";
-                        statusBadge.className = "status-success";
-                        log(`Success (Conf: ${{result.confidence ? result.confidence.toFixed(2) : 'N/A'}}). Wait 5s...`);
-                    }} else {{
-                        statusBadge.textContent = "❌ Auth Failed";
-                        statusBadge.className = "status-fail";
-                        log(`Failed: ${{result.message}}`);
-                    }}
-                }} catch (err) {{
-                    statusBadge.textContent = "Backend Error";
-                    statusBadge.className = "status-fail";
-                    log("Network error contacting backend");
-                }}
-            }}
-
-            // Start everything
-            startCamera();
-        </script>
-    </body>
-    </html>
-    """
-    
-    components.html(html_code, height=400)
-
 def show_authentication_section():
     """Show authentication UI (your existing auth code)"""
     # Show current status
@@ -590,22 +486,14 @@ def show_authentication_section():
 
             auth_mode = st.selectbox(
                 "Authentication Mode:",
-                ["Full", "Face", "Fingerprint"],
+                ["full", "face", "fingerprint"],
                 index=0,
                 key="auth_mode"
             )
-            # Eavesdropping simulation (sender only, as sender initiates BB84)
-            simulate_eavesdrop = False
-            if st.session_state.identity == "sender":
-                st.markdown("##### 🥷 Security Testing")
-                simulate_eavesdrop = st.checkbox(
-                    "Simulate QKD Eavesdropping Attack", 
-                    help="Forces a 25% error rate on the quantum channel to trigger the BB84 eavesdropping alarm."
-                )
 
             if st.button("🔓 Authenticate Now", type="primary", use_container_width=True, key="auth_start_btn"):
                 with st.spinner(f"Authenticating as {st.session_state.identity}... Look at camera"):
-                    result = authenticate(st.session_state.identity, auth_mode, simulate_eavesdrop)
+                    result = authenticate(st.session_state.identity, auth_mode)
 
                 if result.get('success'):
                     session_id = result.get('session_id')
@@ -632,11 +520,7 @@ def show_authentication_section():
 
                     st.rerun()
                 else:
-                    if result.get('eavesdropping_detected'):
-                        st.error("🚨 **SECURITY ALERT:** " + result.get('message', 'Eavesdropping detected!'))
-                        st.warning("The BB84 quantum channel detected an error rate exceeding the 15% safety threshold. Key exchange was aborted.")
-                    else:
-                        st.error(f"❌ Authentication Failed: {result.get('message', 'Unknown error')}")
+                    st.error(f"❌ Authentication Failed: {result.get('message', 'Unknown error')}")
 
         with col2:
             st.subheader("Enrollment Status")
@@ -658,112 +542,70 @@ def show_authentication_section():
                         st.caption("Go to Enrollment tab to enroll")
             except Exception as e:
                 st.error(f"Cannot check enrollment: {e}")
-                
-            st.divider()
-            st.info("Continuous authentication will begin once you are successfully authenticated.")
     else:
         # Authenticated - show operations
         st.header(f"📁 {st.session_state.identity.upper()} Operations")
 
         if st.session_state.identity == "sender":
-            # Check if file was already downloaded
-            if st.session_state.get('sender_downloaded', False):
-                st.success("🎉 Thank you! The encrypted payload has been downloaded successfully.")
-                if st.button("Start New Transfer", key="sender_reset_btn"):
-                    st.session_state.sender_downloaded = False
-                    st.rerun()
-                return
+            # Sender: Encrypt and Send
+            st.subheader("🔒 Encrypt & Send File")
 
-            col_main, col_auth = st.columns([2, 1])
-            with col_main:
-                # Sender: Encrypt and Send
-                st.subheader("🔒 Encrypt & Send File")
+            uploaded_file = st.file_uploader(
+                "Choose file to encrypt",
+                type=['txt', 'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'zip', 'json'],
+                help="Max file size: 100MB",
+                key="sender_file_upload"
+            )
 
-                uploaded_file = st.file_uploader(
-                    "Choose file to encrypt",
-                    type=['txt', 'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'zip', 'json'],
-                    help="Max file size: 100MB",
-                    key="sender_file_upload"
-                )
+            compress = st.checkbox("Compress before encryption", value=True, key="sender_compress")
 
-                compress = st.checkbox("Compress before encryption", value=True, key="sender_compress")
+            if uploaded_file is not None:
+                col1, col2 = st.columns([1, 1])
 
-                if uploaded_file is not None:
-                    col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.info(f"**File:** {uploaded_file.name}")
+                    st.info(f"**Size:** {len(uploaded_file.getvalue()) / 1024:.2f} KB")
+                    st.info(f"**Type:** {uploaded_file.type}")
 
-                    with col1:
-                        st.info(f"**File:** {uploaded_file.name}")
-                        st.info(f"**Size:** {len(uploaded_file.getvalue()) / 1024:.2f} KB")
-                        st.info(f"**Type:** {uploaded_file.type}")
+                with col2:
+                    if st.button("🔐 Encrypt & Download", type="primary", use_container_width=True, key="sender_encrypt_btn"):
+                        with st.spinner("Encrypting..."):
+                            success, data, metadata = upload_and_encrypt(
+                                uploaded_file, 
+                                st.session_state.sender_session_id,
+                                compress
+                            )
 
-                    with col2:
-                        if st.button("🔐 Encrypt File", type="primary", use_container_width=True, key="sender_encrypt_btn"):
-                            with st.spinner("Encrypting..."):
-                                success, data, metadata = upload_and_encrypt(
-                                    uploaded_file, 
-                                    st.session_state.sender_session_id,
-                                    compress
-                                )
-
-                            if success:
-                                st.session_state.sender_encrypted_data = data
-                                st.session_state.sender_encrypted_meta = metadata
-                                st.session_state.sender_uploaded_name = uploaded_file.name
-                            else:
-                                st.error(f"❌ Encryption failed: {data}")
-
-                        # If we have encrypted data, show it independently of the Encrypt button
-                        if st.session_state.get('sender_encrypted_data') is not None:
+                        if success:
                             st.success("✅ File encrypted successfully!")
                             
-                            metadata = st.session_state.get('sender_encrypted_meta')
                             if metadata:
                                 meta = json.loads(metadata)
                                 st.json(meta)
 
-                            output_filename = f"{st.session_state.sender_uploaded_name}.enc"
-                            
-                            def on_sender_download():
-                                st.session_state.sender_downloaded = True
-                                # Clear the payload from memory
-                                st.session_state.sender_encrypted_data = None
-                                
+                            output_filename = f"{uploaded_file.name}.enc"
                             st.download_button(
                                 label="⬇️ Download Encrypted File",
-                                data=st.session_state.sender_encrypted_data,
+                                data=data,
                                 file_name=output_filename,
                                 mime="application/octet-stream",
-                                key="sender_download_btn",
-                                on_click=on_sender_download
+                                key="sender_download_btn"
                             )
 
                             st.info("📤 Encrypted! Now switch to Receiver mode to decrypt.")
-
-            with col_auth:
-                st.subheader("🛡️ Continuous Security")
-                st.caption("Auto-capturing every 5 seconds")
-                show_continuous_auth_widget()
+                        else:
+                            st.error(f"❌ Encryption failed: {data}")
 
         else:
-            # Check if file was already downloaded
-            if st.session_state.get('receiver_downloaded', False):
-                st.success("🎉 Thank you! The decrypted payload has been downloaded successfully.")
-                if st.button("Start New Transfer", key="receiver_reset_btn"):
-                    st.session_state.receiver_downloaded = False
-                    st.rerun()
-                return
+            # Receiver: Decrypt
+            st.subheader("🔓 Decrypt Received File")
 
-            col_main, col_auth = st.columns([2, 1])
-            with col_main:
-                # Receiver: Decrypt
-                st.subheader("🔓 Decrypt Received File")
-
-                encrypted_file = st.file_uploader(
-                    "Choose encrypted file",
-                    type=['enc'],
-                    help="Upload .enc file from sender",
-                    key="receiver_file_upload"
-                )
+            encrypted_file = st.file_uploader(
+                "Choose encrypted file",
+                type=['enc'],
+                help="Upload .enc file from sender",
+                key="receiver_file_upload"
+            )
 
             if encrypted_file is not None:
                 col1, col2 = st.columns([1, 1])
@@ -773,7 +615,7 @@ def show_authentication_section():
                     st.info(f"**Size:** {len(encrypted_file.getvalue()) / 1024:.2f} KB")
 
                 with col2:
-                    if st.button("🔓 Decrypt File", type="primary", use_container_width=True, key="receiver_decrypt_btn"):
+                    if st.button("🔓 Decrypt & Download", type="primary", use_container_width=True, key="receiver_decrypt_btn"):
                         with st.spinner("Decrypting..."):
                             success, data, metadata = upload_and_decrypt(
                                 encrypted_file,
@@ -781,43 +623,26 @@ def show_authentication_section():
                             )
 
                         if success:
-                            st.session_state.receiver_decrypted_data = data
-                            st.session_state.receiver_decrypted_meta = metadata
-                            st.session_state.receiver_uploaded_name = encrypted_file.name
+                            st.success("✅ File decrypted successfully!")
+
+                            if metadata:
+                                meta = json.loads(metadata)
+                                original_name = meta.get('original_name', 'decrypted_file')
+                                st.json(meta)
+                            else:
+                                original_name = encrypted_file.name.replace('.enc', '')
+
+                            st.download_button(
+                                label="⬇️ Download Decrypted File",
+                                data=data,
+                                file_name=original_name,
+                                mime="application/octet-stream",
+                                key="receiver_download_btn"
+                            )
+                            
+                            st.info("✅ Decryption complete!")
                         else:
                             st.error(f"❌ Decryption failed: {data}")
-
-                    # If we have decrypted data, show it independently of the Decrypt button
-                    if st.session_state.get('receiver_decrypted_data') is not None:
-                        st.success("✅ File decrypted successfully!")
-
-                        metadata = st.session_state.get('receiver_decrypted_meta')
-                        if metadata:
-                            meta = json.loads(metadata)
-                            original_name = meta.get('original_name', 'decrypted_file')
-                            st.json(meta)
-                        else:
-                            original_name = st.session_state.receiver_uploaded_name.replace('.enc', '')
-
-                        def on_receiver_download():
-                            st.session_state.receiver_downloaded = True
-                            st.session_state.receiver_decrypted_data = None
-                            
-                        st.download_button(
-                            label="⬇️ Download Decrypted File",
-                            data=st.session_state.receiver_decrypted_data,
-                            file_name=original_name,
-                            mime="application/octet-stream",
-                            key="receiver_download_btn",
-                            on_click=on_receiver_download
-                        )
-                        
-                        st.info("✅ Decryption complete!")
-
-            with col_auth:
-                st.subheader("🛡️ Continuous Security")
-                st.caption("Auto-capturing every 5 seconds")
-                show_continuous_auth_widget()
 
 def main():
     # Header
@@ -919,9 +744,10 @@ def main():
             st.session_state.session_id = None
             st.session_state.key_fingerprint = None
             st.markdown(
-                '<meta http-equiv="refresh" content="1;url=http://localhost:8501">',
+                '<meta http-equiv="refresh" content="1;url=http://localhost:8500">',
                 unsafe_allow_html=True
             )
+            st.rerun()
     
     # Main content based on page
     if st.session_state.current_page == "enrollment":

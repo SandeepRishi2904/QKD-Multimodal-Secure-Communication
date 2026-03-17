@@ -64,7 +64,7 @@ class BB84Protocol:
         # Simulate measurement
         measured_bits = []
         for i, (bit, basis) in enumerate(zip(bits, bases)):
-            if eavesdrop:  # Eve intercepts 100% of packets to definitively trigger the 15% error alarm
+            if eavesdrop and secrets.randbelow(4) == 0:  # 25% chance Eve measures
                 # Eavesdropper introduces errors when basis mismatch
                 eve_basis = secrets.randbelow(2)
                 if eve_basis != basis:
