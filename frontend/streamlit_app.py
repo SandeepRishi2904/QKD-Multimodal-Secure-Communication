@@ -36,74 +36,187 @@ MODE = args.mode
 BACKEND_URL = args.backend
 API_BASE = f"{BACKEND_URL}"
 
-# Custom CSS
+# Custom CSS — Premium dark theme
 st.markdown("""
 <style>
+    /* ── Google Fonts ── */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    /* ── Global ── */
+    #MainMenu { visibility: hidden; }
+    footer     { visibility: hidden; }
+
+    html, body, [class*="css"], .stApp {
+        font-family: 'Inter', sans-serif !important;
+        background: linear-gradient(135deg, #0f0c29 0%, #1a1a4e 50%, #24243e 100%) !important;
+        color: #e2e8f0 !important;
+    }
+
+    /* ── Sidebar ── */
+    section[data-testid="stSidebar"] {
+        background: rgba(15,12,41,0.85) !important;
+        border-right: 1px solid rgba(255,255,255,0.07) !important;
+        backdrop-filter: blur(12px);
+    }
+    section[data-testid="stSidebar"] * { color: #e2e8f0 !important; }
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 { color: #ffffff !important; }
+
+    /* ── Header ── */
     .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #1f77b4;
+        font-size: 2.2rem;
+        font-weight: 800;
+        background: linear-gradient(90deg, #667eea, #a78bfa, #38ef7d);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         text-align: center;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.3rem;
+        letter-spacing: -0.5px;
     }
     .sub-header {
-        font-size: 1.2rem;
-        color: #666;
+        font-size: 0.95rem;
+        color: rgba(255,255,255,0.42);
         text-align: center;
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
+        letter-spacing: 0.3px;
     }
+
+    /* ── Auth box ── */
     .auth-box {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, rgba(102,126,234,0.25) 0%, rgba(118,75,162,0.25) 100%);
+        border: 1px solid rgba(102,126,234,0.4);
         padding: 2rem;
-        border-radius: 1rem;
+        border-radius: 1.2rem;
         color: white;
         text-align: center;
-        margin: 2rem 0;
+        margin: 1.5rem 0;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 8px 32px rgba(102,126,234,0.15);
     }
+    .auth-box h2 { color: #fff !important; font-weight: 800; }
+    .auth-box p  { color: rgba(255,255,255,0.7) !important; }
+
+    /* ── Enroll box ── */
     .enroll-box {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        background: linear-gradient(135deg, rgba(17,153,142,0.25) 0%, rgba(56,239,125,0.15) 100%);
+        border: 1px solid rgba(56,239,125,0.3);
         padding: 2rem;
-        border-radius: 1rem;
+        border-radius: 1.2rem;
         color: white;
         text-align: center;
-        margin: 2rem 0;
+        margin: 1.5rem 0;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 8px 32px rgba(17,153,142,0.15);
     }
-    .stButton>button {
-        width: 100%;
-        border-radius: 0.5rem;
-        height: 3rem;
-        font-weight: bold;
-    }
+
+    /* ── Status badges ── */
     .success-box {
-        background-color: #d4edda;
-        color: #155724;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 5px solid #28a745;
+        background: rgba(56,239,125,0.1);
+        color: #6ee7b7;
+        padding: 1rem 1.2rem;
+        border-radius: 0.75rem;
+        border-left: 4px solid #38ef7d;
+        font-weight: 500;
+        margin: 0.5rem 0;
     }
     .warning-box {
-        background-color: #fff3cd;
-        color: #856404;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 5px solid #ffc107;
+        background: rgba(251,191,36,0.1);
+        color: #fcd34d;
+        padding: 1rem 1.2rem;
+        border-radius: 0.75rem;
+        border-left: 4px solid #fbbf24;
+        font-weight: 500;
+        margin: 0.5rem 0;
     }
     .error-box {
-        background-color: #f8d7da;
-        color: #721c24;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 5px solid #dc3545;
+        background: rgba(239,68,68,0.1);
+        color: #fca5a5;
+        padding: 1rem 1.2rem;
+        border-radius: 0.75rem;
+        border-left: 4px solid #ef4444;
+        font-weight: 500;
+        margin: 0.5rem 0;
     }
     .enroll-nav-box {
-        background-color: #e7f3ff;
-        border: 2px solid #1f77b4;
-        border-radius: 0.5rem;
+        background: rgba(102,126,234,0.1);
+        border: 1px solid rgba(102,126,234,0.3);
+        border-radius: 0.75rem;
         padding: 1rem;
         margin: 1rem 0;
     }
+
+    /* ── Buttons ── */
+    .stButton > button {
+        width: 100% !important;
+        border-radius: 0.75rem !important;
+        height: 3rem !important;
+        font-weight: 700 !important;
+        font-size: 0.9rem !important;
+        transition: all 0.2s ease !important;
+        letter-spacing: 0.2px !important;
+    }
+    .stButton > button:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 20px rgba(102,126,234,0.35) !important;
+    }
+    button[kind="primary"] {
+        background: linear-gradient(135deg, #667eea, #764ba2) !important;
+        border: none !important;
+        color: #fff !important;
+    }
+
+    /* ── Inputs ── */
+    .stTextInput > div > div > input {
+        background: rgba(255,255,255,0.06) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        border-radius: 0.6rem !important;
+        color: #e2e8f0 !important;
+    }
+    .stTextInput label, .stSelectbox label,
+    .stFileUploader label, .stCheckbox label,
+    .stRadio label {
+        color: rgba(255,255,255,0.85) !important;
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+    }
+
+    /* ── Metrics ── */
+    [data-testid="stMetric"] {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem !important;
+    }
+    [data-testid="stMetricLabel"] { color: rgba(255,255,255,0.7) !important; font-size: 0.8rem !important; }
+    [data-testid="stMetricValue"] { color: #ffffff !important; font-weight: 700 !important; }
+
+    /* ── Divider ── */
+    hr { border-color: rgba(255,255,255,0.08) !important; }
+
+    /* ── Alerts ── */
+    .stAlert { border-radius: 0.75rem !important; }
+
+    /* ── Headings ── */
+    h1, h2, h3 { color: #ffffff !important; font-weight: 700 !important; }
+    h4, h5, h6 { color: #e2e8f0 !important; font-weight: 600 !important; }
+    p, span, li { color: #e2e8f0 !important; }
+
+    /* ── Expander ── */
+    .streamlit-expanderHeader {
+        background: rgba(255,255,255,0.04) !important;
+        border-radius: 0.6rem !important;
+        color: #94a3b8 !important;
+        font-weight: 600 !important;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: rgba(102,126,234,0.4); border-radius: 99px; }
 </style>
 """, unsafe_allow_html=True)
+
 
 # Session state initialization
 if 'session_id' not in st.session_state:
@@ -117,7 +230,12 @@ if 'sender_authenticated' not in st.session_state:
 if 'receiver_authenticated' not in st.session_state:
     st.session_state.receiver_authenticated = False
 if 'identity' not in st.session_state:
-    st.session_state.identity = MODE
+    # Auto-detect role from login redirect query param (?role=sender/receiver)
+    try:
+        query_role = st.query_params.get("role", MODE)
+        st.session_state.identity = query_role if query_role in ['sender', 'receiver'] else MODE
+    except Exception:
+        st.session_state.identity = MODE
 if 'key_fingerprint' not in st.session_state:
     st.session_state.key_fingerprint = None
 # Enrollment state
@@ -131,6 +249,10 @@ if 'fingerprint_captured' not in st.session_state:
     st.session_state.fingerprint_captured = False
 if 'current_page' not in st.session_state:
     st.session_state.current_page = "main"
+if 'sender_downloaded' not in st.session_state:
+    st.session_state.sender_downloaded = False
+if 'receiver_downloaded' not in st.session_state:
+    st.session_state.receiver_downloaded = False
 
 def check_backend():
     """Check if backend is running"""
@@ -212,7 +334,7 @@ def reset_enrollment_state():
 
 def return_to_main_app():
     """Redirect to the respective main app port"""
-    port = 8501 if st.session_state.identity == "sender" else 8502
+    port = 8501 if st.session_state.identity == "Sender" else 8502
     st.markdown(f'<meta http-equiv="refresh" content="0;url=http://localhost:{port}">', unsafe_allow_html=True)
     st.info(f"Redirecting to Main App on port {port}...")
 
@@ -291,10 +413,11 @@ def show_enrollment_section():
         
         identity = st.radio(
             "Select Identity to Enroll:",
-            ["sender", "receiver"],
+            ["Sender", "Receiver"],
             horizontal=True,
             key="enroll_identity_select"
         )
+        identity = identity.lower()  # backend expects lowercase
         
         col1, col2, col3 = st.columns([1, 1, 1])
         with col2:
@@ -486,14 +609,14 @@ def show_authentication_section():
 
             auth_mode = st.selectbox(
                 "Authentication Mode:",
-                ["full", "face", "fingerprint"],
+                ["Full", "Face", "Fingerprint"],
                 index=0,
                 key="auth_mode"
             )
 
             if st.button("🔓 Authenticate Now", type="primary", use_container_width=True, key="auth_start_btn"):
                 with st.spinner(f"Authenticating as {st.session_state.identity}... Look at camera"):
-                    result = authenticate(st.session_state.identity, auth_mode)
+                    result = authenticate(st.session_state.identity, auth_mode.lower())
 
                 if result.get('success'):
                     session_id = result.get('session_id')
@@ -546,6 +669,115 @@ def show_authentication_section():
         # Authenticated - show operations
         st.header(f"📁 {st.session_state.identity.upper()} Operations")
 
+        # Continuous Face Authentication (Applies to both Sender and Receiver)
+        import streamlit.components.v1 as components
+        
+        st.subheader("🛡️ Live Security Status")
+        
+        # Use raw HTML/JS for continuous background polling
+        js_code = f"""
+        <html>
+        <body style="margin:0; padding:0; font-family: 'Inter', sans-serif;">
+            <div id="auth-status" style="
+                padding: 12px 16px;
+                border-radius: 8px;
+                background: #e0f2fe;
+                color: #0369a1;
+                border: 1px solid #bae6fd;
+                font-size: 14px;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                transition: all 0.3s ease;
+            ">
+                <span class="pulse" style="
+                    width: 8px; height: 8px; 
+                    background: currentColor; 
+                    border-radius: 50%;
+                    display: inline-block;
+                "></span>
+                Initializing continuous {st.session_state.identity} verification...
+            </div>
+
+            <!-- Hidden elements for capture -->
+            <video id="video" width="320" height="240" autoplay playsinline style="display:none;"></video>
+            <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+
+            <script>
+                const video = document.getElementById('video');
+                const canvas = document.getElementById('canvas');
+                const ctx = canvas.getContext('2d');
+                const statusEl = document.getElementById('auth-status');
+                
+                let consecutiveFailures = 0;
+
+                // Request camera
+                navigator.mediaDevices.getUserMedia({{ video: true }})
+                    .then(stream => {{
+                        video.srcObject = stream;
+                        statusEl.innerHTML = "✅ Camera connected. Continuous monitoring active.";
+                    }})
+                    .catch(err => {{
+                        console.error("Camera access denied:", err);
+                        statusEl.innerHTML = "⚠️ Camera access denied. Cannot verify {st.session_state.identity}.";
+                        statusEl.style.background = "#fee2e2";
+                        statusEl.style.color = "#b91c1c";
+                        statusEl.style.borderColor = "#f87171";
+                    }});
+                    
+                // Poll exactly every 5 seconds
+                setInterval(() => {{
+                    if (!video.videoWidth) return;
+                    
+                    // Capture frame
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7); // 70% quality to save bandwidth
+                    
+                    // Send frame to continuous auth endpoint
+                    fetch('{API_BASE}/authenticate/continuous', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify({{
+                            identity: '{st.session_state.identity}',
+                            image: dataUrl
+                        }})
+                    }})
+                    .then(res => res.json())
+                    .then(data => {{
+                        if (data.success) {{
+                            consecutiveFailures = 0;
+                            statusEl.innerHTML = "🟢 Live Face Verified (" + (data.confidence * 100).toFixed(1) + "%)";
+                            statusEl.style.background = "#dcfce7";
+                            statusEl.style.color = "#15803d";
+                            statusEl.style.borderColor = "#86efac";
+                        }} else {{
+                            consecutiveFailures++;
+                            statusEl.innerHTML = "🔴 Verification Failed: " + (data.message || "Face not recognized") + " (" + consecutiveFailures + " fails)";
+                            statusEl.style.background = "#fee2e2";
+                            statusEl.style.color = "#b91c1c";
+                            statusEl.style.borderColor = "#f87171";
+                            
+                            // Optional: You can trigger a visible alert or logout if consecutiveFailures > threshold
+                            if (consecutiveFailures > 5) {{
+                                statusEl.innerHTML = "🚨 SECURITY BREACH: Authentication lost. Please re-authenticate.";
+                            }}
+                        }}
+                    }})
+                    .catch(err => {{
+                        console.error("Auth polling error:", err);
+                        statusEl.innerHTML = "⚠️ Backend connection error.";
+                    }});
+                }}, 5000);
+            </script>
+        </body>
+        </html>
+        """
+        
+        components.html(js_code, height=60)
+        
+        st.divider()
+
         if st.session_state.identity == "sender":
             # Sender: Encrypt and Send
             st.subheader("🔒 Encrypt & Send File")
@@ -578,23 +810,56 @@ def show_authentication_section():
 
                         if success:
                             st.success("✅ File encrypted successfully!")
-                            
+                            st.session_state.sender_encrypted_data = data
+                            st.session_state.sender_encrypted_filename = f"{uploaded_file.name}.enc"
                             if metadata:
-                                meta = json.loads(metadata)
-                                st.json(meta)
-
-                            output_filename = f"{uploaded_file.name}.enc"
-                            st.download_button(
-                                label="⬇️ Download Encrypted File",
-                                data=data,
-                                file_name=output_filename,
-                                mime="application/octet-stream",
-                                key="sender_download_btn"
-                            )
-
-                            st.info("📤 Encrypted! Now switch to Receiver mode to decrypt.")
+                                st.session_state.sender_encrypted_meta = json.loads(metadata)
+                            st.rerun()
                         else:
                             st.error(f"❌ Encryption failed: {data}")
+
+            # Show Thank You page after successful encryption OR show download button
+            if 'sender_encrypted_data' in st.session_state and st.session_state.sender_encrypted_data:
+                if st.session_state.sender_downloaded:
+                    # ── Thank You Page ──
+                    st.markdown("""
+                    <div style="
+                        text-align:center;
+                        padding: 3rem 2rem;
+                        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+                        border-radius: 1.5rem;
+                        color: white;
+                        margin-top: 2rem;
+                    ">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">🎉</div>
+                        <h1 style="font-size: 2.2rem; margin-bottom: 0.5rem;">Thank You!</h1>
+                        <p style="font-size: 1.1rem; opacity: 0.92; margin-bottom: 0.5rem;">
+                            Your encrypted file has been sent successfully.
+                        </p>
+                        <p style="font-size: 0.95rem; opacity: 0.8;">
+                            The receiver can now decrypt it using their biometric credentials.
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    st.balloons()
+                    if st.button("🔄 Encrypt Another File", use_container_width=True, key="sender_reset_btn"):
+                        del st.session_state.sender_encrypted_data
+                        st.session_state.sender_downloaded = False
+                        st.rerun()
+                else:
+                    # Show metadata + download button
+                    if 'sender_encrypted_meta' in st.session_state:
+                        st.json(st.session_state.sender_encrypted_meta)
+                    out_fn = st.session_state.sender_encrypted_filename
+                    st.download_button(
+                        label="⬇️ Download Encrypted File",
+                        data=st.session_state.sender_encrypted_data,
+                        file_name=out_fn,
+                        mime="application/octet-stream",
+                        key="sender_download_btn",
+                        on_click=lambda: st.session_state.update({"sender_downloaded": True})
+                    )
+                    st.info("📤 Click to download, then share with the receiver to decrypt.")
 
         else:
             # Receiver: Decrypt
@@ -624,25 +889,59 @@ def show_authentication_section():
 
                         if success:
                             st.success("✅ File decrypted successfully!")
-
+                            st.session_state.receiver_decrypted_data = data
                             if metadata:
                                 meta = json.loads(metadata)
-                                original_name = meta.get('original_name', 'decrypted_file')
-                                st.json(meta)
+                                st.session_state.receiver_decrypted_name = meta.get('original_name', encrypted_file.name.replace('.enc', ''))
+                                st.session_state.receiver_decrypted_meta = meta
                             else:
-                                original_name = encrypted_file.name.replace('.enc', '')
-
-                            st.download_button(
-                                label="⬇️ Download Decrypted File",
-                                data=data,
-                                file_name=original_name,
-                                mime="application/octet-stream",
-                                key="receiver_download_btn"
-                            )
-                            
-                            st.info("✅ Decryption complete!")
+                                st.session_state.receiver_decrypted_name = encrypted_file.name.replace('.enc', '')
+                            st.rerun()
                         else:
                             st.error(f"❌ Decryption failed: {data}")
+
+            # Show Thank You page after successful decryption OR show download button
+            if 'receiver_decrypted_data' in st.session_state and st.session_state.receiver_decrypted_data:
+                if st.session_state.receiver_downloaded:
+                    # ── Thank You Page ──
+                    st.markdown("""
+                    <div style="
+                        text-align:center;
+                        padding: 3rem 2rem;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        border-radius: 1.5rem;
+                        color: white;
+                        margin-top: 2rem;
+                    ">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">🔓</div>
+                        <h1 style="font-size: 2.2rem; margin-bottom: 0.5rem;">Download Complete!</h1>
+                        <p style="font-size: 1.1rem; opacity: 0.92; margin-bottom: 0.5rem;">
+                            Your file has been securely decrypted.
+                        </p>
+                        <p style="font-size: 0.95rem; opacity: 0.8;">
+                            Quantum-secured communication complete. Thank you!
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    st.balloons()
+                    if st.button("🔄 Decrypt Another File", use_container_width=True, key="receiver_reset_btn"):
+                        del st.session_state.receiver_decrypted_data
+                        st.session_state.receiver_downloaded = False
+                        st.rerun()
+                else:
+                    # Show metadata + download button
+                    if 'receiver_decrypted_meta' in st.session_state:
+                        st.json(st.session_state.receiver_decrypted_meta)
+                    out_fn = st.session_state.receiver_decrypted_name
+                    st.download_button(
+                        label="⬇️ Download Decrypted File",
+                        data=st.session_state.receiver_decrypted_data,
+                        file_name=out_fn,
+                        mime="application/octet-stream",
+                        key="receiver_download_btn",
+                        on_click=lambda: st.session_state.update({"receiver_downloaded": True})
+                    )
+                    st.info("✅ Click to download your decrypted file.")
 
 def main():
     # Header
@@ -650,7 +949,14 @@ def main():
     
     # Sidebar
     with st.sidebar:
-        st.header("⚙️ Configuration")
+        st.markdown("""
+        <div style="text-align:center; padding: 1rem 0 0.5rem;">
+            <div style="font-size:2rem;">🔐</div>
+            <div style="font-size:1rem; font-weight:800; color:#f1f5f9; margin-top:0.2rem;">QKD Secure Comm</div>
+            <div style="font-size:0.72rem; color:rgba(255,255,255,0.35); margin-top:0.1rem;">Quantum · Biometric · AES-256</div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.divider()
 
         sender_status = get_enrollment_status("sender")
         receiver_status = get_enrollment_status("receiver")
@@ -659,10 +965,11 @@ def main():
         st.subheader("Switch Identity")
         selected_identity = st.radio(
             "Select identity:",
-            ["sender", "receiver"],
+            ["Sender", "Receiver"],
             index=0 if st.session_state.identity == "sender" else 1,
             key="identity_switch"
         )
+        selected_identity = selected_identity.lower()  # normalize for comparisons
         
         # Handle identity switch
         if selected_identity != st.session_state.identity:
@@ -744,7 +1051,7 @@ def main():
             st.session_state.session_id = None
             st.session_state.key_fingerprint = None
             st.markdown(
-                '<meta http-equiv="refresh" content="1;url=http://localhost:8500">',
+                '<meta http-equiv="refresh" content="1;url=http://localhost:8501">',
                 unsafe_allow_html=True
             )
             st.rerun()

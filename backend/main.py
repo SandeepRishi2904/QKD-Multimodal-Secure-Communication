@@ -36,7 +36,8 @@ sys.path.insert(0, str(parent_dir))
 from config import (
     TEMP_DIR, DEFAULT_HOST, DEFAULT_BACKEND_PORT,
     SENDER_FACE_TEMPLATE, RECEIVER_FACE_TEMPLATE,
-    SENDER_FINGERPRINT_TEMPLATE, RECEIVER_FINGERPRINT_TEMPLATE
+    SENDER_FINGERPRINT_TEMPLATE, RECEIVER_FINGERPRINT_TEMPLATE,
+    FINGERPRINT_SIMULATION
 )
 from bb84 import BB84Protocol
 from face_auth import FaceAuthenticator
@@ -64,7 +65,7 @@ app.add_middleware(
 class AppState:
     def __init__(self):
         self.face_auth = FaceAuthenticator()
-        self.fp_auth = FingerprintAuthenticator(use_simulation=False)
+        self.fp_auth = FingerprintAuthenticator(use_simulation=FINGERPRINT_SIMULATION)
         self.key_fusion = KeyFusion()
         self.bb84 = BB84Protocol()
         self.active_sessions: Dict[str, Any] = {}
@@ -352,9 +353,14 @@ async def authenticate(request: AuthRequest):
 
     # Check if both required for full mode
     if request.mode == 'full' and not (face_verified and fp_verified):
+        failed = []
+        if not face_verified:
+            failed.append(f"Face (score: {face_confidence:.2f})")
+        if not fp_verified:
+            failed.append(f"Fingerprint (score: {fp_confidence:.2f})")
         return AuthResponse(
             success=False,
-            message="Both face and fingerprint verification required",
+            message=f"Authentication failed — {' and '.join(failed)} did not verify. Try re-enrolling or use better lighting.",
             face_verified=face_verified,
             fingerprint_verified=fp_verified,
             face_confidence=face_confidence,

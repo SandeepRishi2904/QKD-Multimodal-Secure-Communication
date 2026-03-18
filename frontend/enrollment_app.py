@@ -19,61 +19,155 @@ st.set_page_config(
 BACKEND_URL = "http://localhost:8000"
 API_BASE = f"{BACKEND_URL}"
 
-# Custom CSS
+# Custom CSS — Premium dark theme
 st.markdown("""
 <style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #11998e;
-        text-align: center;
-        margin-bottom: 0.5rem;
+    /* ── Google Fonts ── */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    /* ── Global ── */
+    #MainMenu { visibility: hidden; }
+    footer     { visibility: hidden; }
+
+    html, body, [class*="css"], .stApp {
+        font-family: 'Inter', sans-serif !important;
+        background: linear-gradient(135deg, #0f0c29 0%, #1a1a4e 50%, #24243e 100%) !important;
+        color: #e2e8f0 !important;
     }
+
+    /* ── Sidebar ── */
+    section[data-testid="stSidebar"] {
+        background: rgba(15,12,41,0.85) !important;
+        border-right: 1px solid rgba(255,255,255,0.07) !important;
+        backdrop-filter: blur(12px);
+    }
+    section[data-testid="stSidebar"] * { color: #e2e8f0 !important; }
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 { color: #ffffff !important; }
+
+    /* ── Header ── */
+    .main-header {
+        font-size: 2.2rem;
+        font-weight: 800;
+        background: linear-gradient(90deg, #11998e, #38ef7d, #a78bfa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-align: center;
+        margin-bottom: 0.3rem;
+        letter-spacing: -0.5px;
+    }
+
+    /* ── Enroll box ── */
     .enroll-box {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        background: linear-gradient(135deg, rgba(17,153,142,0.25) 0%, rgba(56,239,125,0.15) 100%);
+        border: 1px solid rgba(56,239,125,0.3);
         padding: 2rem;
-        border-radius: 1rem;
+        border-radius: 1.2rem;
         color: white;
         text-align: center;
-        margin: 2rem 0;
+        margin: 1.5rem 0;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 8px 32px rgba(17,153,142,0.15);
     }
+
+    /* ── Nav buttons ── */
     .nav-button {
-        background-color: #1f77b4;
+        background: linear-gradient(135deg, #667eea, #764ba2);
         color: white;
         padding: 0.75rem 2rem;
-        border-radius: 0.5rem;
+        border-radius: 0.75rem;
         text-decoration: none;
-        font-weight: bold;
+        font-weight: 700;
         display: inline-block;
         margin: 0.5rem;
+        border: none;
+        transition: all 0.2s;
     }
     .nav-button:hover {
-        background-color: #0d5a8a;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(102,126,234,0.4);
     }
+
+    /* ── Status boxes ── */
     .success-box {
-        background-color: #d4edda;
-        color: #155724;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 5px solid #28a745;
-        margin: 1rem 0;
+        background: rgba(56,239,125,0.1);
+        color: #6ee7b7;
+        padding: 1rem 1.2rem;
+        border-radius: 0.75rem;
+        border-left: 4px solid #38ef7d;
+        font-weight: 500;
+        margin: 0.5rem 0;
     }
     .error-box {
-        background-color: #f8d7da;
-        color: #721c24;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 5px solid #dc3545;
-        margin: 1rem 0;
+        background: rgba(239,68,68,0.1);
+        color: #fca5a5;
+        padding: 1rem 1.2rem;
+        border-radius: 0.75rem;
+        border-left: 4px solid #ef4444;
+        font-weight: 500;
+        margin: 0.5rem 0;
     }
-    .stButton>button {
-        width: 100%;
-        border-radius: 0.5rem;
-        height: 3rem;
-        font-weight: bold;
+
+    /* ── Buttons ── */
+    .stButton > button {
+        width: 100% !important;
+        border-radius: 0.75rem !important;
+        height: 3rem !important;
+        font-weight: 700 !important;
+        font-size: 0.9rem !important;
+        transition: all 0.2s ease !important;
     }
+    .stButton > button:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 20px rgba(102,126,234,0.35) !important;
+    }
+    button[kind="primary"] {
+        background: linear-gradient(135deg, #11998e, #38ef7d) !important;
+        border: none !important;
+        color: #fff !important;
+    }
+
+    /* ── Inputs ── */
+    .stTextInput > div > div > input {
+        background: rgba(255,255,255,0.06) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        border-radius: 0.6rem !important;
+        color: #e2e8f0 !important;
+    }
+    .stTextInput label, .stSelectbox label,
+    .stFileUploader label, .stRadio label {
+        color: rgba(255,255,255,0.85) !important;
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+    }
+
+    /* ── Divider ── */
+    hr { border-color: rgba(255,255,255,0.08) !important; }
+
+    /* ── Alerts ── */
+    .stAlert { border-radius: 0.75rem !important; }
+
+    /* ── Headings ── */
+    h1, h2, h3 { color: #ffffff !important; font-weight: 700 !important; }
+    h4, h5, h6 { color: #e2e8f0 !important; font-weight: 600 !important; }
+    p, span, li { color: #e2e8f0 !important; }
+
+    /* ── Expander ── */
+    .streamlit-expanderHeader {
+        background: rgba(255,255,255,0.04) !important;
+        border-radius: 0.6rem !important;
+        color: #94a3b8 !important;
+        font-weight: 600 !important;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: rgba(17,153,142,0.4); border-radius: 99px; }
 </style>
 """, unsafe_allow_html=True)
+
 
 # Session state
 if 'enrollment_status_message' not in st.session_state:
@@ -114,8 +208,15 @@ def clear_status():
 
 def main():
     # Header
-    st.markdown('<div class="main-header">📝 Biometric Enrollment Center</div>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align: center; color: #666;">Enroll sender and receiver before starting secure communication</p>', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="text-align:center; padding: 2rem 0 0.5rem;">
+        <div style="font-size:3rem; margin-bottom:0.3rem;">🔏</div>
+        <div class="main-header">Biometric Enrollment Center</div>
+        <p style="color:rgba(255,255,255,0.38); font-size:0.88rem; margin-top:0.2rem;">
+            Quantum-secured · AES-256-GCM · Biometric Auth
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Navigation buttons at top
     st.subheader("🧭 Navigation")
@@ -123,8 +224,8 @@ def main():
     
     with col1:
         if st.button("🏠 Back to Login", use_container_width=True):
-            st.markdown('<meta http-equiv="refresh" content="0;url=http://localhost:8500">', unsafe_allow_html=True)
-            st.info("Redirecting to Login page... Click: http://localhost:8500")
+            st.markdown('<meta http-equiv="refresh" content="0;url=http://localhost:8501">', unsafe_allow_html=True)
+            st.info("Redirecting to Login page... Click: http://localhost:1")
     
     with col2:
         if st.button("📤 Go to Sender App", use_container_width=True):
@@ -377,8 +478,8 @@ def main():
         st.markdown("### Login Portal")
         st.info("Use the login page as your main entry point")
         if st.button("🏠 Back to Login", use_container_width=True):
-            st.markdown('<meta http-equiv="refresh" content="0;url=http://localhost:8500">', unsafe_allow_html=True)
-            st.info("Redirecting to Login → http://localhost:8500")
+            st.markdown('<meta http-equiv="refresh" content="0;url=http://localhost:8501">', unsafe_allow_html=True)
+            st.info("Redirecting to Login → http://localhost:8501")
 
 if __name__ == "__main__":
     main()

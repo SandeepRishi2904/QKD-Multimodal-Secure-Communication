@@ -28,7 +28,7 @@ BB84_ERROR_THRESHOLD = 0.15  # 15% error threshold for eavesdropping detection
 # Face Recognition Configuration
 FACE_MODEL = "ArcFace"
 FACE_DETECTOR = "opencv"
-FACE_SIMILARITY_THRESHOLD = 0.6
+FACE_SIMILARITY_THRESHOLD = 0.45  # ArcFace cosine similarity (0.45 is reliable for live capture)
 FACE_EMBEDDING_SIZE = 512
 
 # Fingerprint Configuration
@@ -36,6 +36,7 @@ FINGERPRINT_VENDOR_ID = 0x0bca  # Access FM220U L1
 FINGERPRINT_PRODUCT_ID = 0x2100
 FINGERPRINT_BAUDRATE = 115200
 FINGERPRINT_TIMEOUT = 5
+FINGERPRINT_SIMULATION = True  # Set to True to simulate fingerprint sensor
 
 # Key Fusion Configuration
 HKDF_INFO = b"QKD-Biometric-Fusion-v1"

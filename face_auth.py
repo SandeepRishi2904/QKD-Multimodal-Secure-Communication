@@ -303,37 +303,26 @@ class FaceAuthenticator:
             if image is None:
                 return False, 0.0, "Failed to capture face for verification"
 
-        # Get current embedding
+        # Get current embedding from the captured image
         current_embedding = self.get_embedding(image)
         if current_embedding is None:
-            return False, 0.0, "Failed to extract features from captured face"
+            return False, 0.0, "Failed to extract face features — ensure face is clearly visible"
 
-        # Calculate cosine similarity
+        # Direct cosine similarity between stored and live embeddings
         try:
-            # DeepFace verification
-            result = DeepFace.verify(
-                img1_path=stored_embedding.reshape(1, -1) if isinstance(stored_embedding, np.ndarray) else template_data,
-                img2_path=image,
-                model_name=self.model_name,
-                detector_backend=self.detector,
-                distance_metric="cosine"
-            )
-
-            similarity = 1 - result['distance']  # Convert distance to similarity
-            verified = result['verified']
-
-        except Exception as e:
-            # Fallback to manual calculation
-            logger.warning(f"DeepFace verify failed, using manual calculation: {e}")
             similarity = self._calculate_similarity(stored_embedding, current_embedding)
             verified = similarity >= FACE_SIMILARITY_THRESHOLD
+            logger.info(f"Face similarity for {identity}: {similarity:.3f} (threshold: {FACE_SIMILARITY_THRESHOLD})")
+        except Exception as e:
+            logger.error(f"Similarity calculation failed: {e}")
+            return False, 0.0, f"Face comparison error: {e}"
 
         if verified:
             logger.info(f"✅ Face verified for {identity} (similarity: {similarity:.3f})")
             return True, similarity, "Face verified successfully"
         else:
-            logger.warning(f"❌ Face verification failed (similarity: {similarity:.3f})")
-            return False, similarity, f"Face not recognized (similarity: {similarity:.3f})"
+            logger.warning(f"❌ Face verification failed for {identity} (similarity: {similarity:.3f}, need >= {FACE_SIMILARITY_THRESHOLD})")
+            return False, similarity, f"Face not recognized (score: {similarity:.2f}, need ≥ {FACE_SIMILARITY_THRESHOLD})"
 
     def _calculate_similarity(self, embedding1: np.ndarray, embedding2: np.ndarray) -> float:
         """Calculate cosine similarity between two embeddings"""
