@@ -1,0 +1,28 @@
+{
+  "sandeep": {
+    "password": "3c644a70af1585176674a3a0978fa9ec566e284137f3d606292075e67cee85d5",
+    "role": "sender",
+    "enrolled": true,
+    "created_at": 1773944013.2621531,
+    "fingerprint_enrolled": true,
+    "fingerprint_token": "0c4323c4f4f15e4809d830b1b03d52ab899f96b5d7d6ee98c98f4f1b6a6f2af2",
+    "fingerprint_info": {
+      "method": "Windows Hello",
+      "enrolled_at": 1773945633.6154778
+    },
+    "enrolled_at": 1773945636.0582001
+  },
+  "rishikesh": {
+    "password": "131cfb3c5c280f08acb46085a9156839c1f71e61b0bf4a7defe1de81cd23e2a8",
+    "role": "receiver",
+    "enrolled": true,
+    "created_at": 1773944217.5465245,
+    "fingerprint_enrolled": true,
+    "fingerprint_token": "3fbaa42ba5ba48d686da3fd9efcb0f6c055863a11f47df0e29f80ae8df4d96a1",
+    "fingerprint_info": {
+      "method": "Windows Hello",
+      "enrolled_at": 1773945566.331827
+    },
+    "enrolled_at": 1773945569.47439
+  }
+}
