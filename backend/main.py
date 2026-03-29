@@ -4,6 +4,10 @@ Provides REST API for encryption/decryption and biometric verification
 """
 import os
 import sys
+import subprocess
+import threading
+import webbrowser
+import time as _time
 import json
 import base64
 import logging
@@ -34,7 +38,7 @@ sys.path.insert(0, str(parent_dir))
 
 # Import our modules
 from config import (
-    TEMP_DIR, DEFAULT_HOST, DEFAULT_BACKEND_PORT,
+    TEMP_DIR, DEFAULT_HOST, DEFAULT_BACKEND_PORT, DEFAULT_SENDER_PORT,
     SENDER_FACE_TEMPLATE, RECEIVER_FACE_TEMPLATE,
     SENDER_FINGERPRINT_TEMPLATE, RECEIVER_FINGERPRINT_TEMPLATE,
     FINGERPRINT_SIMULATION
@@ -72,6 +76,11 @@ class AppState:
         self.shared_seed: Optional[bytes] = None
         self.shared_fusion_salt: Optional[bytes] = None
         self.sender_session_info: Optional[Dict] = None
+        # File relay slot
+        self.shared_file_path: Optional[str] = None
+        self.shared_file_name: Optional[str] = None
+        self.shared_file_size: int = 0
+        self.shared_file_ts:   Optional[str] = None
 
 state = AppState()
 
@@ -721,7 +730,75 @@ async def close_session(session_id: str):
         return {"success": True, "message": "Session closed"}
     raise HTTPException(status_code=404, detail="Session not found")
 
+# ==================== FILE SHARE ENDPOINTS ====================
+# Simple one-slot relay: sender uploads, receiver downloads.
+# Stored in AppState so it lives in memory (+ temp file on disk).
+
+@app.post("/share/upload")
+async def share_upload(file: UploadFile = File(...)):
+    """Sender uploads .enc file to relay it to the receiver."""
+    TEMP_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Overwrite any previous shared file
+    if state.shared_file_path and Path(state.shared_file_path).exists():
+        try:
+            Path(state.shared_file_path).unlink()
+        except Exception:
+            pass
+
+    safe_name = Path(file.filename).name or "shared_payload.enc"
+    dest = TEMP_DIR / f"shared__{safe_name}"
+    content = await file.read()
+    with open(dest, "wb") as f:
+        f.write(content)
+
+    state.shared_file_path = str(dest)
+    state.shared_file_name = safe_name
+    state.shared_file_size = len(content)
+    state.shared_file_ts   = datetime.now().isoformat()
+
+    logger.info(f"📤 Shared file uploaded: {safe_name} ({len(content):,} bytes)")
+    return {
+        "success": True,
+        "filename": safe_name,
+        "size": len(content),
+        "timestamp": state.shared_file_ts,
+    }
+
+
+@app.get("/share/status")
+async def share_status():
+    """Receiver checks whether a shared file is waiting."""
+    if not state.shared_file_path or not Path(state.shared_file_path).exists():
+        return {"available": False}
+    return {
+        "available": True,
+        "filename": state.shared_file_name,
+        "size": state.shared_file_size,
+        "timestamp": state.shared_file_ts,
+    }
+
+
+@app.get("/share/download")
+async def share_download():
+    """Receiver downloads the shared .enc file."""
+    if not state.shared_file_path or not Path(state.shared_file_path).exists():
+        raise HTTPException(status_code=404, detail="No shared file available")
+
+    path = Path(state.shared_file_path)
+    name = state.shared_file_name or path.name
+
+    logger.info(f"📥 Shared file downloaded: {name}")
+    return FileResponse(
+        path,
+        filename=name,
+        media_type="application/octet-stream",
+    )
+
+# ==================== END FILE SHARE ENDPOINTS ====================
+
 @app.on_event("startup")
+
 async def startup_event():
     logger.info("🚀 QKD Multimodal API starting up...")
 
@@ -742,11 +819,52 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Error checking enrollment on startup: {e}")
 
+def _launch_frontend():
+    """Launch Streamlit frontend in a background subprocess (Windows-safe)."""
+    import shutil, traceback, platform
+
+    project_root = Path(__file__).parent.parent
+    frontend_script = project_root / "frontend" / "app.py"
+    frontend_port = DEFAULT_SENDER_PORT  # 8501
+
+    logger.info(f"🖥  Launching Streamlit frontend → http://localhost:{frontend_port}")
+    try:
+        if platform.system() == "Windows":
+            # On Windows use shell=True with a plain string command — most reliable
+            cmd = (
+                f'streamlit run "{frontend_script}" '
+                f'--server.port {frontend_port} '
+                f'--server.headless true '
+                f'--browser.gatherUsageStats false'
+            )
+            subprocess.Popen(cmd, cwd=str(project_root), shell=True)
+        else:
+            streamlit_exe = shutil.which("streamlit") or sys.executable
+            cmd = ([streamlit_exe, "run", str(frontend_script)] if shutil.which("streamlit")
+                   else [sys.executable, "-m", "streamlit", "run", str(frontend_script)])
+            cmd += ["--server.port", str(frontend_port),
+                    "--server.headless", "true",
+                    "--browser.gatherUsageStats", "false"]
+            subprocess.Popen(cmd, cwd=str(project_root))
+
+        # Give Streamlit a moment to boot, then open the browser
+        _time.sleep(4)
+        webbrowser.open(f"http://localhost:{frontend_port}")
+        logger.info(f"✅ Browser opened at http://localhost:{frontend_port}")
+    except Exception as exc:
+        logger.error(f"❌ Could not launch frontend: {exc}")
+        logger.error(traceback.format_exc())
+
+
 if __name__ == "__main__":
+    # Start frontend in background thread so backend starts immediately
+    frontend_thread = threading.Thread(target=_launch_frontend, daemon=True)
+    frontend_thread.start()
+
     uvicorn.run(
         "main:app",
         host=DEFAULT_HOST,
         port=DEFAULT_BACKEND_PORT,
-        reload=True,
+        reload=False,          # reload=True conflicts with threading; use False here
         log_level="info"
     )

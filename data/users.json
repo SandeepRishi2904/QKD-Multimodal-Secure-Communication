@@ -24,5 +24,18 @@
       "enrolled_at": 1773945566.331827
     },
     "enrolled_at": 1773945569.47439
+  },
+  "rishikesh21": {
+    "password": "255771db5e0b77fe8ff8853cc70e7656778bd1ca0d08ed0bd7911155b14467f9",
+    "role": "receiver",
+    "enrolled": true,
+    "created_at": 1774431591.4819834,
+    "fingerprint_enrolled": true,
+    "fingerprint_token": "317798543e26eb131e70f6c33686853bdc82dfdc9c26cc2ebc6e0334c908e216",
+    "fingerprint_info": {
+      "method": "Windows Hello",
+      "enrolled_at": 1774433355.026827
+    },
+    "enrolled_at": 1774433357.5714424
   }
 }

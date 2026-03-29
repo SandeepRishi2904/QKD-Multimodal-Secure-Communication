@@ -50,6 +50,14 @@ DEFAULT_RECEIVER_PORT = 8502
 DEFAULT_LOGIN_PORT = 8500  # New: Login page port
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 
+# ── Relay server address ──────────────────────────────────────────────────────
+# SENDER  → set to "localhost"  (backend runs on this machine)
+# RECEIVER → set to the sender's LAN IP  (e.g. "192.168.1.105")
+# Find sender's IP with: ipconfig  →  look for "IPv4 Address" under Wi-Fi
+SENDER_BACKEND_IP = "localhost"
+SENDER_BACKEND_URL = f"http://{SENDER_BACKEND_IP}:{DEFAULT_BACKEND_PORT}"
+
+
 # Template paths
 SENDER_FACE_TEMPLATE = FACE_DIR / "sender_face_template.pkl"
 RECEIVER_FACE_TEMPLATE = FACE_DIR / "receiver_face_template.pkl"

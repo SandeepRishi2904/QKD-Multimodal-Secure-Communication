@@ -1,9 +1,10 @@
-"""
-Login App — QKD Multimodal Secure Communication
-Port 8501 | Gatekeeper UI
+﻿"""
+QSec — Unified Gateway  (Login + Enrollment)
+Port 8501 · Single-app design — no second port needed.
 
-Handles user login, registration, and routing to main app or enrollment.
-Integrates with all three innovations via session state flags.
+Navigation (via st.tabs after login):
+  Tab 0 — Sign In / Register
+  Tab 1 — Biometric Enrollment  (shown only when authenticated)
 """
 
 import streamlit as st
@@ -11,17 +12,18 @@ import hashlib
 import json
 import os
 import time
+import numpy as np
 from pathlib import Path
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="QSec — Quantum Secure Gateway",
     page_icon="🔐",
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-# ── CSS — Dark quantum aesthetic ──────────────────────────────────────────────
+# ── Shared CSS — Dark quantum aesthetic ──────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Exo+2:wght@200;300;400;600&display=swap');
@@ -33,10 +35,11 @@ st.markdown("""
     --border:     rgba(0, 200, 255, 0.18);
     --border-hot: rgba(0, 200, 255, 0.55);
     --cyan:       #00c8ff;
-    --cyan-dim:   rgba(0, 200, 255, 0.12);
+    --cyan-dim:   rgba(0, 200, 255, 0.10);
     --green:      #00ff9d;
-    --green-dim:  rgba(0, 255, 157, 0.10);
+    --green-dim:  rgba(0, 255, 157, 0.09);
     --red:        #ff3c6e;
+    --amber:      #ffb400;
     --text-1:     #e8f4ff;
     --text-2:     #7ba8c4;
     --text-3:     #3d6278;
@@ -45,25 +48,35 @@ st.markdown("""
     --body:       'Exo 2', sans-serif;
 }
 
-/* Global reset */
 html, body, [class*="css"] {
     font-family: var(--body);
     background-color: var(--bg-deep) !important;
     color: var(--text-1);
 }
-
 .stApp {
     background: var(--bg-deep) !important;
     background-image:
         radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,200,255,0.07) 0%, transparent 60%),
         linear-gradient(180deg, rgba(0,200,255,0.03) 0%, transparent 40%) !important;
 }
-
-/* Hide Streamlit chrome */
 #MainMenu, footer, header { visibility: hidden; }
-.block-container { padding: 2rem 1rem !important; max-width: 520px !important; margin: 0 auto; }
+.block-container { padding: 2rem 1.5rem !important; max-width: 900px !important; margin: 0 auto; }
+/* Dashboard extras */
+[data-testid="stSidebar"]{background:#060d1a!important;border-right:1px solid rgba(0,200,255,0.15)!important;}
+.qcard-green::before{background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.qcard-purple::before{background:linear-gradient(90deg,transparent,#b48aff,transparent);}
+.card-title-green{color:var(--green)!important;}
+.card-title-purple{color:#b48aff!important;}
+.badge-red{background:rgba(255,60,110,0.08);color:var(--red);border:1px solid rgba(255,60,110,0.25);}
+.metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.7rem;margin-bottom:1rem;}
+.metric-tile{background:rgba(0,200,255,0.04);border:1px solid var(--border);border-radius:3px;padding:0.9rem;text-align:center;}
+.metric-val{font-family:var(--mono);font-size:1.4rem;font-weight:500;color:var(--cyan);line-height:1;}
+.metric-val.green{color:var(--green);} .metric-val.amber{color:var(--amber);} .metric-val.red{color:var(--red);}
+.metric-label{font-family:var(--mono);font-size:0.58rem;color:var(--text-3);letter-spacing:0.15em;text-transform:uppercase;margin-top:0.3rem;}
+.log-entry{font-family:var(--mono);font-size:0.7rem;color:var(--text-2);padding:0.35rem 0;border-bottom:1px solid rgba(0,200,255,0.06);}
+.log-entry .ts{color:var(--text-3);} .log-entry .ok{color:var(--green);} .log-entry .warn{color:var(--amber);} .log-entry .err{color:var(--red);} .log-entry .info{color:var(--cyan);}
 
-/* ── Hero header ── */
+/* ── Hero ── */
 .qsec-hero {
     text-align: center;
     padding: 2.5rem 0 1.5rem;
@@ -100,22 +113,22 @@ html, body, [class*="css"] {
 }
 
 /* ── Card ── */
-.qsec-card {
+.qcard {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 4px;
-    padding: 2rem;
+    padding: 1.8rem;
     margin-bottom: 1.2rem;
     position: relative;
     overflow: hidden;
 }
-.qsec-card::before {
+.qcard::before {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 2px;
     background: linear-gradient(90deg, transparent, var(--cyan), transparent);
-    opacity: 0.6;
+    opacity: 0.5;
 }
 .card-title {
     font-family: var(--mono);
@@ -138,8 +151,7 @@ html, body, [class*="css"] {
     font-size: 0.9rem !important;
     padding: 0.6rem 0.9rem !important;
 }
-.stTextInput > div > div > input:focus,
-.stSelectbox > div > div > div:focus {
+.stTextInput > div > div > input:focus {
     border-color: var(--border-hot) !important;
     box-shadow: 0 0 0 2px var(--cyan-dim) !important;
 }
@@ -177,7 +189,7 @@ html, body, [class*="css"] {
 }
 
 /* ── Alerts ── */
-.stSuccess > div, .element-container .stAlert[data-baseweb="notification"] {
+.stSuccess > div {
     background: var(--green-dim) !important;
     border-left: 3px solid var(--green) !important;
     border-radius: 3px !important;
@@ -195,7 +207,7 @@ html, body, [class*="css"] {
 }
 .stWarning > div {
     background: rgba(255,180,0,0.07) !important;
-    border-left: 3px solid #ffb400 !important;
+    border-left: 3px solid var(--amber) !important;
     border-radius: 3px !important;
     font-family: var(--mono) !important;
     font-size: 0.8rem !important;
@@ -209,7 +221,7 @@ html, body, [class*="css"] {
     font-size: 0.8rem !important;
 }
 
-/* ── Status badges ── */
+/* ── Badges ── */
 .badge {
     display: inline-block;
     font-family: var(--mono);
@@ -223,35 +235,20 @@ html, body, [class*="css"] {
 .badge-green { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,255,157,0.3); }
 .badge-cyan  { background: var(--cyan-dim);  color: var(--cyan);  border: 1px solid rgba(0,200,255,0.3); }
 .badge-gray  { background: rgba(255,255,255,0.04); color: var(--text-2); border: 1px solid var(--border); }
+.badge-amber { background: rgba(255,180,0,0.08); color: var(--amber); border: 1px solid rgba(255,180,0,0.3); }
 
-/* ── Innovation tags ── */
-.inno-row {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin: 0.8rem 0;
-}
+/* ── Enrollment specific ── */
+.inno-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.8rem 0; }
+.step-row { display:flex; align-items:center; gap:0.8rem; padding:0.7rem 0; border-bottom:1px solid rgba(0,200,255,0.07); }
+.step-num { font-family:var(--mono); font-size:0.65rem; color:var(--cyan); opacity:0.6; min-width:1.5rem; }
+.step-text { font-family:var(--body); font-size:0.85rem; color:var(--text-2); }
+.step-done { color: var(--green) !important; }
+.progress-bar { height:3px; background:rgba(0,200,255,0.1); border-radius:2px; margin:0.8rem 0 0.3rem; }
+.progress-fill { height:100%; background:linear-gradient(90deg,var(--cyan),var(--green)); border-radius:2px; transition:width 0.5s ease; }
+.mono-info { font-family:var(--mono); font-size:0.72rem; color:var(--text-2); line-height:1.9; }
+.mono-info span { color: var(--cyan); }
 
-/* ── Divider ── */
-.qdivider {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 1.5rem 0;
-}
-
-/* ── Footer ── */
-.qfooter {
-    text-align: center;
-    font-family: var(--mono);
-    font-size: 0.6rem;
-    color: var(--text-3);
-    letter-spacing: 0.2em;
-    padding: 2rem 0 1rem;
-    border-top: 1px solid var(--border);
-    margin-top: 2rem;
-}
-
-/* ── Tab styling ── */
+/* ── Tabs ── */
 .stTabs [data-baseweb="tab-list"] {
     background: transparent !important;
     border-bottom: 1px solid var(--border) !important;
@@ -272,20 +269,32 @@ html, body, [class*="css"] {
     border-bottom: 2px solid var(--cyan) !important;
 }
 
-/* ── Spinner ── */
+/* ── Misc ── */
+.qdivider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+.qfooter {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--text-3);
+    letter-spacing: 0.2em;
+    padding: 2rem 0 1rem;
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+}
 .stSpinner > div { border-top-color: var(--cyan) !important; }
-
-/* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg-deep); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── User store ────────────────────────────────────────────────────────────────
-USER_DB = Path("data/users.json")
+# ── Paths ─────────────────────────────────────────────────────────────────────
+USER_DB  = Path("data/users.json")
+FACE_DIR = Path("data/face_templates")
 USER_DB.parent.mkdir(parents=True, exist_ok=True)
+FACE_DIR.mkdir(parents=True, exist_ok=True)
 
+# ── User helpers ──────────────────────────────────────────────────────────────
 def load_users() -> dict:
     if USER_DB.exists():
         with open(USER_DB) as f:
@@ -319,8 +328,14 @@ def register_user(username: str, password: str, role: str) -> bool:
     return True
 
 def is_enrolled(username: str) -> bool:
+    return load_users().get(username, {}).get("enrolled", False)
+
+def mark_enrolled(uname: str) -> None:
     users = load_users()
-    return users.get(username, {}).get("enrolled", False)
+    if uname in users:
+        users[uname]["enrolled"] = True
+        users[uname]["enrolled_at"] = time.time()
+        save_users(users)
 
 # ── Session defaults ──────────────────────────────────────────────────────────
 for key, val in {
@@ -328,91 +343,55 @@ for key, val in {
     "username": None,
     "role": None,
     "enrolled": False,
+    "current_page": "__login__",   # __login__ = show login UI
+    "session_log": [],
+    "rekey_count": 0,
+    "qber_history": [],
+    "key_fingerprint": None,
+    "liveness_passed": None,
+    "cont_auth_active": False,
+    "cont_auth_last_check": 0.0,
+    "cont_auth_sim": None,
+    "cont_auth_ok": None,
+    "cont_auth_failures": 0,
+    "cont_auth_blocked": False,
 }.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
-# ── Hero ──────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="qsec-hero">
-    <div class="qsec-logo">◈ Quantum Secure Communications ◈</div>
-    <h1 class="qsec-title">Q<span>SEC</span></h1>
-    <div class="qsec-sub">BB84 · AES-256-GCM · Multimodal Biometrics</div>
-</div>
-""", unsafe_allow_html=True)
+# ── Helper: add log entry ─────────────────────────────────────────────────────
+def ts(): return time.strftime("%H:%M:%S")
+def add_log(msg, level="info"):
+    st.session_state.session_log.append({"ts": ts(), "msg": msg, "level": level})
 
-# ── Innovation badges ─────────────────────────────────────────────────────────
-st.markdown("""
-<div class="inno-row">
-    <span class="badge badge-cyan">BQES · Biometric Entropy Seeding</span>
-    <span class="badge badge-green">QNLD · Quantum Noise Liveness</span>
-    <span class="badge badge-cyan">Adaptive Re-keying</span>
-</div>
-""", unsafe_allow_html=True)
-
-# ── Authenticated view ────────────────────────────────────────────────────────
-if st.session_state.authenticated:
-    enrolled = is_enrolled(st.session_state.username)
-
-    st.markdown(f"""
-    <div class="qsec-card">
-        <div class="card-title">◈ Session Active</div>
-        <span class="badge badge-green">● Authenticated</span>
-        <span class="badge badge-cyan">{st.session_state.role.upper()}</span>
-        <span class="badge badge-gray">{st.session_state.username}</span>
-        {'<span class="badge badge-green">Biometrics Enrolled</span>' if enrolled else '<span class="badge badge-amber">Enrollment Optional</span>'}
+# ── Hero (only on login screen) ───────────────────────────────────────────────
+if st.session_state.current_page == "__login__":
+    st.markdown("""
+    <div class="qsec-hero">
+        <div class="qsec-logo">◈ Quantum Secure Communications ◈</div>
+        <h1 class="qsec-title">Q<span>SEC</span></h1>
+        <div class="qsec-sub">BB84 · AES-256-GCM · Multimodal Biometrics</div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("""
+    <div class="inno-row">
+        <span class="badge badge-cyan">BQES · Biometric Entropy Seeding</span>
+        <span class="badge badge-green">QNLD · Quantum Noise Liveness</span>
+        <span class="badge badge-cyan">Adaptive Re-keying</span>
     </div>
     """, unsafe_allow_html=True)
 
-    # Always allow direct access — no enrollment gate
-    st.success("✓  Authentication successful. Access granted.")
-
-    col1, col2 = st.columns(2)
-    uname = st.session_state.username or ""
-    urole = st.session_state.role or "sender"
-    ops_url = f"http://192.168.110.138:8501?auth_user={uname}&auth_role={urole}"
-    with col1:
-        st.markdown('<div class="btn-primary">', unsafe_allow_html=True)
-        if st.button("Open Operations Panel →", key="goto_main"):
-            st.markdown(f'<meta http-equiv="refresh" content="0;url={ops_url}">', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-    with col2:
-        if st.button("Sign Out", key="logout"):
-            for k in ["authenticated", "username", "role", "enrolled"]:
-                st.session_state[k] = None if k not in ("authenticated", "enrolled") else False
-            st.rerun()
-
-    # Enrollment shown as optional upgrade, not a blocker
-    if not enrolled:
-        st.markdown('<hr class="qdivider">', unsafe_allow_html=True)
-        st.markdown("""
-        <div class="qsec-card">
-            <div class="card-title">◈ Optional — Biometric Enrollment</div>
-            <div style="font-family:var(--mono);font-size:0.72rem;color:var(--text-2);line-height:2.1;">
-                Enroll your face and fingerprint to unlock:<br>
-                &nbsp;· &nbsp;<span style="color:var(--cyan)">BQES</span> — Identity-bound BB84 key generation<br>
-                &nbsp;· &nbsp;<span style="color:var(--cyan)">QNLD</span> — Quantum noise liveness detection<br>
-                &nbsp;· &nbsp;<span style="color:var(--cyan)">ARK &nbsp;</span> — Adaptive re-keying on biometric drift
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("→ Go to Enrollment Center (Port 8502)", key="goto_enroll"):
-            st.markdown(f'<meta http-equiv="refresh" content="0;url={ops_url}">', unsafe_allow_html=True)
-    else:
-        st.info("→  Biometrics active. All three innovations (BQES · QNLD · ARK) will run during operations.")
-
-# ── Login / Register ──────────────────────────────────────────────────────────
-else:
+# ══════════════════════════════════════════════════════════════════════════════
+# LOGIN SCREEN
+# ══════════════════════════════════════════════════════════════════════════════
+if st.session_state.current_page == "__login__":
     tab_login, tab_register = st.tabs(["  Sign In  ", "  Register  "])
 
     with tab_login:
-        st.markdown('<div class="qsec-card"><div class="card-title">◈ Identity Verification</div>', unsafe_allow_html=True)
-
+        st.markdown('<div class="qcard"><div class="card-title">◈ Identity Verification</div>', unsafe_allow_html=True)
         username = st.text_input("Username", key="login_user", placeholder="operator_id")
         password = st.text_input("Password", type="password", key="login_pass", placeholder="••••••••••••")
-
         st.markdown('</div>', unsafe_allow_html=True)
-
         st.markdown('<div class="btn-primary">', unsafe_allow_html=True)
         if st.button("Authenticate →", key="login_btn"):
             if not username or not password:
@@ -423,25 +402,21 @@ else:
                 st.session_state.username = username
                 st.session_state.role = users[username].get("role", "user")
                 st.session_state.enrolled = is_enrolled(username)
+                st.session_state.current_page = "Dashboard"
                 with st.spinner("Initialising secure session..."):
-                    time.sleep(0.6)
-                st.success(f"✓  Welcome back, {username}.")
-                time.sleep(0.5)
+                    time.sleep(0.5)
                 st.rerun()
             else:
                 st.error("✗  Invalid credentials. Access denied.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with tab_register:
-        st.markdown('<div class="qsec-card"><div class="card-title">◈ New Operator Registration</div>', unsafe_allow_html=True)
-
+        st.markdown('<div class="qcard"><div class="card-title">◈ New Operator Registration</div>', unsafe_allow_html=True)
         new_user = st.text_input("Choose Username", key="reg_user", placeholder="operator_id")
         new_pass = st.text_input("Choose Password", type="password", key="reg_pass", placeholder="min. 8 characters")
         confirm  = st.text_input("Confirm Password", type="password", key="reg_conf", placeholder="repeat password")
         role     = st.selectbox("Operator Role", ["sender", "receiver"], key="reg_role")
-
         st.markdown('</div>', unsafe_allow_html=True)
-
         if st.button("Register Operator →", key="reg_btn"):
             if not all([new_user, new_pass, confirm]):
                 st.error("✗  All fields required.")
@@ -450,40 +425,29 @@ else:
             elif new_pass != confirm:
                 st.error("✗  Passwords do not match.")
             elif register_user(new_user, new_pass, role):
-                st.success(f"✓  Operator '{new_user}' registered as {role}.")
-                st.info("→  Sign in to access the Operations Panel. Biometric enrollment is optional.")
+                st.success(f"✓  Operator '{new_user}' registered as {role}. Sign in to continue.")
             else:
                 st.error(f"✗  Username '{new_user}' already exists.")
 
-# ── System status panel ───────────────────────────────────────────────────────
-st.markdown('<hr class="qdivider">', unsafe_allow_html=True)
-st.markdown('<div class="qsec-card"><div class="card-title">◈ System Status</div>', unsafe_allow_html=True)
+# ══════════════════════════════════════════════════════════════════════════════
+# AUTHENTICATED — load full dashboard from streamlit_app.py
+# ══════════════════════════════════════════════════════════════════════════════
+elif st.session_state.authenticated:
+    # ── Delegate to the full operations dashboard ───────────────────────────
+    # streamlit_app.py contains all pages (Dashboard, Encrypt, Decrypt, etc.)
+    # We exec() it in this same Python scope so it shares session_state and
+    # the page_config already set above. The auth guard inside streamlit_app.py
+    # is bypassed because session_state.authenticated is already True.
+    _dashboard = Path(__file__).parent / "streamlit_app.py"
+    exec(compile(_dashboard.read_text(encoding="utf-8"), str(_dashboard), "exec"),
+         {**globals(), "__file__": str(_dashboard)})
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.markdown('<span class="badge badge-green">● BB84 Active</span>', unsafe_allow_html=True)
-with col2:
-    st.markdown('<span class="badge badge-green">● AES-256-GCM</span>', unsafe_allow_html=True)
-with col3:
-    st.markdown('<span class="badge badge-cyan">● BQES v2.0</span>', unsafe_allow_html=True)
-
-users = load_users()
-total = len(users)
-enrolled_count = sum(1 for u in users.values() if u.get("enrolled"))
-st.markdown(f"""
-<div style="margin-top:1rem; font-family:var(--mono); font-size:0.72rem; color:var(--text-2); line-height:2;">
-    REGISTERED OPERATORS &nbsp;·&nbsp; <span style="color:var(--cyan)">{total}</span><br>
-    ENROLLED BIOMETRICS  &nbsp;·&nbsp; <span style="color:var(--green)">{enrolled_count}</span><br>
-    PROTOCOL &nbsp;·&nbsp; <span style="color:var(--cyan)">BB84-BQES-QNLD-v2</span>
-</div>
-""", unsafe_allow_html=True)
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-# ── Footer ────────────────────────────────────────────────────────────────────
-st.markdown("""
+# ── Footer (login screen only — dashboard has its own) ────────────────────────
+if st.session_state.current_page == "__login__":
+    st.markdown("""
 <div class="qfooter">
     QSEC MULTIMODAL SECURE COMM · BB84 + AES-256-GCM · BQES · QNLD · ADAPTIVE RE-KEYING<br>
     FOR AUTHORISED OPERATORS ONLY · ALL SESSIONS MONITORED AND LOGGED
 </div>
 """, unsafe_allow_html=True)
+
