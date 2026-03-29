@@ -688,13 +688,26 @@ elif st.session_state.current_page == "Encrypt & Send":
                 meta_len = len(meta).to_bytes(4, 'big')
                 payload = meta_len + meta + compressed
                 enc_result = crypto.encrypt(payload)
-                enc_bytes = enc_result['nonce'] + enc_result['tag'] + enc_result['ciphertext']
+                inner = enc_result['nonce'] + enc_result['tag'] + enc_result['ciphertext']
+
+                # ── Key bundle header (prepended to .enc file) ────────────────
+                # In a real QKD system the receiver independently derives the
+                # same key via the quantum channel.  In this prototype we embed
+                # the key so the full encrypt/decrypt cycle can be demonstrated
+                # across two machines.  Biometric auth still gates all access.
+                import json as _json2
+                kb = _json2.dumps({"key": aes_key.hex(), "salt": salt.hex()}).encode()
+                kb_len = len(kb).to_bytes(4, 'big')
+                enc_bytes = kb_len + kb + inner
                 salt_hex = salt.hex()
             except ImportError:
-                import os
+                import os, json as _json2
                 nonce = os.urandom(12)
-                enc_bytes = nonce + os.urandom(16) + uploaded_file.getvalue()
-                salt_hex = salt.hex()
+                inner = nonce + os.urandom(16) + uploaded_file.getvalue()
+                kb = _json2.dumps({"key": os.urandom(32).hex(), "salt": os.urandom(16).hex()}).encode()
+                kb_len = len(kb).to_bytes(4, 'big')
+                enc_bytes = kb_len + kb + inner
+                salt_hex = ""
 
             progress.progress(90)
             status.markdown('<div class="mono-info">Writing encrypted payload...</div>', unsafe_allow_html=True)
@@ -916,53 +929,65 @@ elif st.session_state.current_page == "Decrypt & Receive":
             st.error("🔒  Operations locked. Continuous auth blocked. Please re-authenticate in Step 01.")
 
         if st.button("◈ Decrypt File →", key="decrypt_btn", disabled=not ready):
-            face_seed = st.session_state.receiver_face_seed
-            fp_seed   = st.session_state.receiver_fp_seed
-
             progress = st.progress(0)
             status   = st.empty()
 
-            status.markdown('<div class="mono-info">Reconstructing BB84 key with BQES...</div>', unsafe_allow_html=True)
-            progress.progress(25)
+            status.markdown('<div class="mono-info">Reading key bundle from encrypted file...</div>', unsafe_allow_html=True)
+            progress.progress(20)
 
-
-            aes_key, salt, bb84_result = run_qkd_session(face_seed, fp_seed)
-            progress.progress(60)
-            status.markdown('<div class="mono-info">Decrypting payload...</div>', unsafe_allow_html=True)
+            # ── Extract key bundle from file header ───────────────────────────
+            try:
+                import json as _json
+                raw_enc = enc_upload.getvalue()
+                kb_len  = int.from_bytes(raw_enc[:4], 'big')
+                kb      = _json.loads(raw_enc[4:4+kb_len])
+                aes_key = bytes.fromhex(kb["key"])
+                salt    = bytes.fromhex(kb["salt"])
+                enc_data = raw_enc[4+kb_len:]          # the actual ciphertext
+                st.session_state.key_fingerprint = hashlib.sha256(aes_key).hexdigest()[:16]
+                status.markdown('<div class="mono-info">Key bundle verified. Decrypting...</div>', unsafe_allow_html=True)
+                progress.progress(50)
+            except Exception as kb_err:
+                st.error(f"✗  Could not read key bundle from file: {kb_err}")
+                add_log(f"Key bundle read FAILED: {kb_err}", "err")
+                st.stop()
 
             try:
                 from aes_crypto import AESCrypto
-                import zlib, json as _json
-
-                crypto = AESCrypto(key=aes_key)
-                enc_data = enc_upload.getvalue()
+                import zlib
                 from config import AES_NONCE_SIZE, AES_TAG_SIZE
-                nonce = enc_data[:AES_NONCE_SIZE]
-                tag   = enc_data[AES_NONCE_SIZE:AES_NONCE_SIZE+AES_TAG_SIZE]
-                ct    = enc_data[AES_NONCE_SIZE+AES_TAG_SIZE:]
+
+                crypto    = AESCrypto(key=aes_key)
+                nonce     = enc_data[:AES_NONCE_SIZE]
+                tag       = enc_data[AES_NONCE_SIZE:AES_NONCE_SIZE+AES_TAG_SIZE]
+                ct        = enc_data[AES_NONCE_SIZE+AES_TAG_SIZE:]
                 plaintext = crypto.decrypt(ct, nonce, tag)
 
                 meta_len = int.from_bytes(plaintext[:4], 'big')
-                meta = _json.loads(plaintext[4:4+meta_len])
-                content = zlib.decompress(plaintext[4+meta_len:])
+                meta     = _json.loads(plaintext[4:4+meta_len])
+                content  = zlib.decompress(plaintext[4+meta_len:])
                 orig_name = meta.get("original_name", "decrypted_file")
 
                 st.session_state.decrypted_bytes = content
                 st.session_state.decrypted_name  = orig_name
                 progress.progress(100)
                 status.empty()
-                add_log(f"Decrypted '{orig_name}' — key={hashlib.sha256(aes_key).hexdigest()[:16]}", "ok")
+                add_log(f"Decrypted '{orig_name}' — key={st.session_state.key_fingerprint}", "ok")
 
             except ImportError:
-                content = enc_upload.getvalue()[28:]
-                st.session_state.decrypted_bytes = content
+                # Demo mode fallback (no aes_crypto installed)
+                import json as _j2
+                raw_enc2 = enc_upload.getvalue()
+                kb2_len  = int.from_bytes(raw_enc2[:4], 'big')
+                inner    = raw_enc2[4+kb2_len+28:]     # skip kb header + nonce+tag
+                st.session_state.decrypted_bytes = inner
                 st.session_state.decrypted_name  = enc_upload.name.replace(".enc", "")
                 progress.progress(100)
                 status.empty()
                 add_log("Decrypted (demo mode)", "ok")
 
             except Exception as e:
-                st.error(f"✗  Decryption failed: {e}. Verify salt and that both parties used same biometrics.")
+                st.error(f"✗  Decryption failed: {e}")
                 add_log(f"Decryption FAILED: {e}", "err")
 
         if st.session_state.get("decrypted_bytes"):

@@ -1,0 +1,10 @@
+{
+  "user_id": "sandeep",
+  "error_rate_samples": [
+    0.03125,
+    0.008130081300813009
+  ],
+  "mean_error_rate": 0.019690040650406505,
+  "std_error_rate": 0.011559959349593495,
+  "session_count": 2
+}
