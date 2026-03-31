@@ -81,6 +81,8 @@ class AppState:
         self.shared_file_name: Optional[str] = None
         self.shared_file_size: int = 0
         self.shared_file_ts:   Optional[str] = None
+        # Intended receiver — only this user may fetch the shared file
+        self.shared_intended_receiver: Optional[str] = None
 
 state = AppState()
 
@@ -735,8 +737,38 @@ async def close_session(session_id: str):
 # Stored in AppState so it lives in memory (+ temp file on disk).
 
 @app.post("/share/upload")
-async def share_upload(file: UploadFile = File(...)):
-    """Sender uploads .enc file to relay it to the receiver."""
+async def share_upload(
+    file: UploadFile = File(...),
+    sender_username: str = Form(...),
+    intended_receiver: str = Form(...),
+):
+    """Sender uploads .enc file to relay it to a specific receiver.
+    
+    Requires sender_username (must be a registered sender/both role) and
+    intended_receiver username (must be a registered receiver/both role).
+    Only the designated receiver will be allowed to fetch this file.
+    """
+    # Load users DB to validate roles
+    import json as _json_users
+    users_path = Path(__file__).parent.parent / "data" / "users.json"
+    try:
+        with open(users_path) as _uf:
+            _all_users = _json_users.load(_uf)
+    except Exception:
+        _all_users = {}
+
+    # Validate sender
+    if sender_username not in _all_users:
+        raise HTTPException(status_code=401, detail=f"Sender '{sender_username}' not found in user database")
+    if _all_users[sender_username].get("role") not in ("sender", "both"):
+        raise HTTPException(status_code=403, detail=f"'{sender_username}' does not have sender privileges")
+
+    # Validate intended_receiver
+    if intended_receiver not in _all_users:
+        raise HTTPException(status_code=400, detail=f"Receiver '{intended_receiver}' not found in user database")
+    if _all_users[intended_receiver].get("role") not in ("receiver", "both"):
+        raise HTTPException(status_code=400, detail=f"'{intended_receiver}' is not a receiver account")
+
     TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
     # Overwrite any previous shared file
@@ -756,21 +788,37 @@ async def share_upload(file: UploadFile = File(...)):
     state.shared_file_name = safe_name
     state.shared_file_size = len(content)
     state.shared_file_ts   = datetime.now().isoformat()
+    state.shared_intended_receiver = intended_receiver
 
-    logger.info(f"📤 Shared file uploaded: {safe_name} ({len(content):,} bytes)")
+    logger.info(f"📤 '{sender_username}' uploaded: {safe_name} ({len(content):,} bytes) → intended for '{intended_receiver}'")
     return {
         "success": True,
         "filename": safe_name,
         "size": len(content),
         "timestamp": state.shared_file_ts,
+        "intended_receiver": intended_receiver,
     }
 
 
 @app.get("/share/status")
-async def share_status():
-    """Receiver checks whether a shared file is waiting."""
+async def share_status(requester_username: Optional[str] = None):
+    """Receiver checks whether a shared file is waiting for them.
+    
+    requester_username must match the intended_receiver set by the sender.
+    Without a valid requester, the file is not revealed.
+    """
     if not state.shared_file_path or not Path(state.shared_file_path).exists():
         return {"available": False}
+
+    # If no intended_receiver was set, legacy behaviour — allow (should not happen with new uploads)
+    if state.shared_intended_receiver is None:
+        return {"available": False, "error": "File has no designated receiver — contact sender"}
+
+    # Reject if the requester is not the intended receiver
+    if not requester_username or requester_username.strip() != state.shared_intended_receiver:
+        logger.warning(f"🚫 Unauthorised status check by '{requester_username}' (intended: '{state.shared_intended_receiver}')")
+        return {"available": False}  # Do NOT reveal file existence to wrong user
+
     return {
         "available": True,
         "filename": state.shared_file_name,
@@ -780,15 +828,31 @@ async def share_status():
 
 
 @app.get("/share/download")
-async def share_download():
-    """Receiver downloads the shared .enc file."""
+async def share_download(requester_username: Optional[str] = None):
+    """Receiver downloads the shared .enc file.
+    
+    requester_username must match the intended_receiver chosen by the sender.
+    Any other user gets a 403 Forbidden.
+    """
     if not state.shared_file_path or not Path(state.shared_file_path).exists():
         raise HTTPException(status_code=404, detail="No shared file available")
+
+    # Enforce receiver restriction
+    if state.shared_intended_receiver is not None:
+        if not requester_username or requester_username.strip() != state.shared_intended_receiver:
+            logger.warning(f"🚫 Unauthorised download attempt by '{requester_username}' (intended: '{state.shared_intended_receiver}')")
+            raise HTTPException(
+                status_code=403,
+                detail=f"Access denied. This file was not shared with you."
+            )
+    else:
+        # Safety: if no intended_receiver set, block all downloads (force re-upload)
+        raise HTTPException(status_code=403, detail="File has no designated receiver — sender must re-upload")
 
     path = Path(state.shared_file_path)
     name = state.shared_file_name or path.name
 
-    logger.info(f"📥 Shared file downloaded: {name}")
+    logger.info(f"📥 Shared file downloaded by '{requester_username}': {name}")
     return FileResponse(
         path,
         filename=name,

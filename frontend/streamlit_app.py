@@ -135,6 +135,14 @@ def load_users():
         with open(USER_DB) as f: return json.load(f)
     return {}
 
+def load_receiver_usernames():
+    """Return list of registered usernames whose role is 'receiver' or 'both'."""
+    all_users = load_users()
+    return [
+        uname for uname, udata in all_users.items()
+        if udata.get("role") in ("receiver", "both")
+    ]
+
 def ts():
     return time.strftime("%H:%M:%S")
 
@@ -731,24 +739,39 @@ elif st.session_state.current_page == "Encrypt & Send":
             )
 
             # ── Share directly to receiver via backend relay ──
-            if st.button("📤  Share to Receiver (via Server)", key="share_enc_btn"):
-                with st.spinner("Uploading to relay server..."):
-                    try:
-                        import requests as _req, io
-                        _resp = _req.post(
-                            f"{SENDER_BACKEND_URL}/share/upload",
-                            files={"file": (st.session_state.enc_filename,
-                                           io.BytesIO(st.session_state.encrypted_bytes),
-                                           "application/octet-stream")},
-                            timeout=30,
-                        )
-                        if _resp.status_code == 200:
-                            st.success(f"✓  Shared! Receiver can now fetch it from the server.")
-                            add_log(f"Shared '{st.session_state.enc_filename}' to relay server", "ok")
-                        else:
-                            st.error(f"✗  Upload failed: {_resp.text}")
-                    except Exception as _e:
-                        st.error(f"✗  Share failed: {_e}")
+            # Sender must select which receiver this file is for.
+            _rcv_list = load_receiver_usernames()
+            if not _rcv_list:
+                st.warning("⚠  No receiver accounts found. Register a receiver user first.")
+            else:
+                _chosen_rcv = st.selectbox(
+                    "🔒 Select Intended Receiver",
+                    options=_rcv_list,
+                    key="share_receiver_select",
+                    help="Only this receiver will be able to fetch the encrypted file from the server."
+                )
+                if st.button("📤  Share to Receiver (via Server)", key="share_enc_btn"):
+                    with st.spinner("Uploading to relay server..."):
+                        try:
+                            import requests as _req, io
+                            _resp = _req.post(
+                                f"{SENDER_BACKEND_URL}/share/upload",
+                                files={"file": (st.session_state.enc_filename,
+                                               io.BytesIO(st.session_state.encrypted_bytes),
+                                               "application/octet-stream")},
+                                data={
+                                    "sender_username": username,
+                                    "intended_receiver": _chosen_rcv,
+                                },
+                                timeout=30,
+                            )
+                            if _resp.status_code == 200:
+                                st.success(f"✓  Shared! Only **{_chosen_rcv}** can fetch it from the server.")
+                                add_log(f"Shared '{st.session_state.enc_filename}' → receiver: {_chosen_rcv}", "ok")
+                            else:
+                                st.error(f"✗  Upload failed: {_resp.text}")
+                        except Exception as _e:
+                            st.error(f"✗  Share failed: {_e}")
 
             st.markdown(f"""
             <div class="mono-info" style="margin-top:0.8rem;">
@@ -862,7 +885,11 @@ elif st.session_state.current_page == "Decrypt & Receive":
         # ── Fetch from relay server ──
         try:
             import requests as _req
-            _sr = _req.get(f"{SENDER_BACKEND_URL}/share/status", timeout=3)
+            _sr = _req.get(
+                f"{SENDER_BACKEND_URL}/share/status",
+                params={"requester_username": username},
+                timeout=3
+            )
             _sdata = _sr.json() if _sr.status_code == 200 else {}
         except Exception:
             _sdata = {}
@@ -875,7 +902,7 @@ elif st.session_state.current_page == "Decrypt & Receive":
             <div style="background:rgba(0,255,157,0.05);border:1px solid rgba(0,255,157,0.2);
                         border-radius:4px;padding:0.8rem 1rem;margin-bottom:0.8rem;">
                 <div style="font-family:var(--mono);font-size:0.6rem;color:var(--green);letter-spacing:0.25em;">
-                    ◈ FILE AVAILABLE ON SERVER
+                    ◈ FILE SHARED FOR YOU
                 </div>
                 <div style="font-family:var(--mono);font-size:0.7rem;color:var(--text-2);margin-top:0.4rem;line-height:1.8;">
                     NAME &nbsp;·&nbsp; <span style="color:var(--cyan)">{_sfname}</span><br>
@@ -887,19 +914,26 @@ elif st.session_state.current_page == "Decrypt & Receive":
             if st.button("📥  Fetch Shared File from Server", key="fetch_shared_btn"):
                 with st.spinner("Downloading from relay server..."):
                     try:
-                        _dr = _req.get(f"{SENDER_BACKEND_URL}/share/download", timeout=30)
+                        _dr = _req.get(
+                            f"{SENDER_BACKEND_URL}/share/download",
+                            params={"requester_username": username},
+                            timeout=30
+                        )
                         if _dr.status_code == 200:
                             st.session_state.fetched_enc_bytes = _dr.content
                             st.session_state.fetched_enc_name  = _sfname
                             add_log(f"Fetched '{_sfname}' from relay server", "ok")
                             st.success(f"✓  '{_sfname}' fetched. Ready to decrypt.")
                             st.rerun()
+                        elif _dr.status_code == 403:
+                            st.error(f"✗  Access denied: This file was not shared with you.")
+                            add_log(f"Fetch DENIED for '{_sfname}'", "err")
                         else:
                             st.error(f"✗  Fetch failed: {_dr.text}")
                     except Exception as _e:
                         st.error(f"✗  Fetch error: {_e}")
         else:
-            st.info("ℹ  No file shared by sender yet. Ask sender to click 'Share to Receiver'.")
+            st.info("ℹ  No file currently shared for you. Ask the sender to share an encrypted file with your account.")
 
         # Manual upload fallback
         enc_upload = st.file_uploader("Or upload .enc file manually", key="dec_file_upload", type=["enc"])

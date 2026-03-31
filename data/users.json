@@ -37,5 +37,31 @@
       "enrolled_at": 1774433355.026827
     },
     "enrolled_at": 1774433357.5714424
+  },
+  "rithish": {
+    "password": "92b8d948a7ad16e7634b457c01475e3f9f02cdeaccb1606738e45f53125c9cea",
+    "role": "receiver",
+    "enrolled": true,
+    "created_at": 1774933342.182306,
+    "fingerprint_enrolled": true,
+    "fingerprint_token": "016aad75ae98991f128f8fa1e7146746535148f66955de0cd63f30578c0aadbb",
+    "fingerprint_info": {
+      "method": "Windows Hello",
+      "enrolled_at": 1774933490.0666037
+    },
+    "enrolled_at": 1774933492.1008914
+  },
+  "shivam": {
+    "password": "353b23e8bb9f62647f2032422920278a3055a93258f922cc3885a1d1e7ce83b3",
+    "role": "sender",
+    "enrolled": true,
+    "created_at": 1774941053.1457267,
+    "fingerprint_enrolled": true,
+    "fingerprint_token": "b88c2d388344309d7267a5d056865f012fdd24d507074074905b914010aa10c7",
+    "fingerprint_info": {
+      "method": "Windows Hello",
+      "enrolled_at": 1774941116.7727082
+    },
+    "enrolled_at": 1774941118.867909
   }
 }
