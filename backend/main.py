@@ -24,19 +24,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 
-# Setup logging
+               
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# Add parent directory to path so we can import from root
+                                                         
 current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
 
-# Import our modules
+                    
 from config import (
     TEMP_DIR, DEFAULT_HOST, DEFAULT_BACKEND_PORT, DEFAULT_SENDER_PORT,
     SENDER_FACE_TEMPLATE, RECEIVER_FACE_TEMPLATE,
@@ -56,7 +56,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS
+      
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -65,7 +65,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global state
+              
 class AppState:
     def __init__(self):
         self.face_auth = FaceAuthenticator()
@@ -76,17 +76,17 @@ class AppState:
         self.shared_seed: Optional[bytes] = None
         self.shared_fusion_salt: Optional[bytes] = None
         self.sender_session_info: Optional[Dict] = None
-        # File relay slot
+                         
         self.shared_file_path: Optional[str] = None
         self.shared_file_name: Optional[str] = None
         self.shared_file_size: int = 0
         self.shared_file_ts:   Optional[str] = None
-        # Intended receiver — only this user may fetch the shared file
+                                                                      
         self.shared_intended_receiver: Optional[str] = None
 
 state = AppState()
 
-# Pydantic models
+                 
 class AuthRequest(BaseModel):
     identity: str
     mode: str = 'full'
@@ -94,7 +94,7 @@ class AuthRequest(BaseModel):
 
 class ContinuousAuthRequest(BaseModel):
     identity: str
-    image: str  # base64 encoded image data URL
+    image: str                                 
 
 class AuthResponse(BaseModel):
     success: bool
@@ -115,7 +115,7 @@ class SwitchIdentityRequest(BaseModel):
 class FingerprintEnrollRequest(BaseModel):
     identity: str
 
-# Health check
+              
 @app.get("/")
 async def root():
     return {
@@ -133,7 +133,7 @@ async def health():
         "timestamp": datetime.now().isoformat()
     }
 
-# Enrollment status check
+                         
 @app.get("/enrollment/{identity}")
 async def check_enrollment(identity: str):
     """Check if identity is enrolled"""
@@ -154,7 +154,7 @@ async def check_enrollment(identity: str):
         }
     except Exception as e:
         logger.error(f"Error checking enrollment: {e}")
-        # Return not enrolled if there's an error
+                                                 
         return {
             "identity": identity,
             "face_enrolled": False,
@@ -163,7 +163,7 @@ async def check_enrollment(identity: str):
             "error": str(e)
         }
 
-# ==================== ENROLLMENT ENDPOINTS ====================
+                                                                
 
 @app.post("/enroll/face")
 async def enroll_face(
@@ -178,23 +178,23 @@ async def enroll_face(
     
     logger.info(f"Starting face enrollment for {identity}")
     
-    # Ensure directories exist
+                              
     from config import FACE_DIR
     FACE_DIR.mkdir(parents=True, exist_ok=True)
     TEMP_DIR.mkdir(parents=True, exist_ok=True)
     
-    # Save uploaded image temporarily
+                                     
     temp_path = TEMP_DIR / f"enroll_face_{identity}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
     
     try:
-        # Save uploaded file
+                            
         content = await image.read()
         with open(temp_path, 'wb') as f:
             f.write(content)
         
         logger.info(f"Saved temp image ({len(content)} bytes) to {temp_path}")
         
-        # Read image for processing
+                                   
         import cv2
         img = cv2.imread(str(temp_path))
         
@@ -203,10 +203,10 @@ async def enroll_face(
         
         logger.info(f"Image loaded: {img.shape}")
         
-        # Perform enrollment using FaceAuthenticator
+                                                    
         success, message = state.face_auth.enroll_face(identity, image=img)
         
-        # Clean up temp file
+                            
         temp_path.unlink(missing_ok=True)
         
         if success:
@@ -222,7 +222,7 @@ async def enroll_face(
             raise HTTPException(status_code=400, detail=message)
             
     except Exception as e:
-        # Clean up on error
+                           
         if temp_path.exists():
             temp_path.unlink(missing_ok=True)
         logger.error(f"Face enrollment error: {e}")
@@ -244,15 +244,15 @@ async def enroll_fingerprint(request: FingerprintEnrollRequest):
     logger.info(f"Starting fingerprint enrollment for {identity}")
     
     try:
-        # Ensure directory exists
+                                 
         from config import FINGERPRINT_DIR
         FINGERPRINT_DIR.mkdir(parents=True, exist_ok=True)
         
-        # Check if already enrolled
+                                   
         if state.fp_auth.check_enrollment(identity):
             logger.info(f"Fingerprint already enrolled for {identity}, will overwrite...")
         
-        # Perform enrollment
+                            
         success, message = state.fp_auth.enroll_fingerprint(identity)
         
         if success:
@@ -290,9 +290,9 @@ async def get_fingerprint_info():
             "error": str(e)
         }
 
-# ==================== END ENROLLMENT ENDPOINTS ====================
+                                                                    
 
-# Authentication endpoint
+                         
 @app.post("/authenticate", response_model=AuthResponse)
 async def authenticate(request: AuthRequest):
     """
@@ -310,7 +310,7 @@ async def authenticate(request: AuthRequest):
     face_hash = None
     fp_hash = None
 
-    # Face authentication
+                         
     if request.mode in ['face', 'full']:
         if not state.face_auth.check_enrollment(request.identity):
             return AuthResponse(
@@ -336,7 +336,7 @@ async def authenticate(request: AuthRequest):
                     fingerprint_verified=False
                 )
 
-    # Fingerprint authentication
+                                
     if request.mode in ['fingerprint', 'full']:
         if not state.fp_auth.check_enrollment(request.identity):
             return AuthResponse(
@@ -362,7 +362,7 @@ async def authenticate(request: AuthRequest):
                     fingerprint_verified=False
                 )
 
-    # Check if both required for full mode
+                                          
     if request.mode == 'full' and not (face_verified and fp_verified):
         failed = []
         if not face_verified:
@@ -378,13 +378,13 @@ async def authenticate(request: AuthRequest):
             fingerprint_confidence=fp_confidence
         )
 
-    # KEY FUSION LOGIC
+                      
     if request.identity == "sender":
-        # SENDER: Generate QKD key and create the encryption key
+                                                                
         if state.shared_seed is None or request.simulate_eavesdrop:
             if request.simulate_eavesdrop:
                 logger.warning("Simulating eavesdropping attack on QKD channel!")
-                state.shared_seed = None # Force new generation with eavesdropping
+                state.shared_seed = None                                          
             else:
                 logger.info("Generating new QKD shared key...")
                 
@@ -410,7 +410,7 @@ async def authenticate(request: AuthRequest):
                     self.eavesdropping_detected = False
             bb84_result = DummyResult(state.shared_seed)
 
-        # Generate fused key with sender's biometrics
+                                                     
         fusion_result = state.key_fusion.fuse_with_verification(
             qkd_key=bb84_result.key,
             face_auth_result=(face_verified, face_confidence, face_hash),
@@ -426,7 +426,7 @@ async def authenticate(request: AuthRequest):
                 fingerprint_verified=fp_verified
             )
 
-        # Store sender's session info globally for receiver to use
+                                                                  
         state.shared_fusion_salt = fusion_result['salt']
         state.sender_session_info = {
             'qkd_key': bb84_result.key,
@@ -438,7 +438,7 @@ async def authenticate(request: AuthRequest):
             }
         }
 
-        # Create sender session
+                               
         session_id = base64.urlsafe_b64encode(os.urandom(16)).decode()
         state.active_sessions[session_id] = {
             'identity': 'sender',
@@ -466,7 +466,7 @@ async def authenticate(request: AuthRequest):
         )
 
     else:
-        # RECEIVER: Verify biometrics, then use sender's key
+                                                            
         if state.sender_session_info is None:
             return AuthResponse(
                 success=False,
@@ -475,7 +475,7 @@ async def authenticate(request: AuthRequest):
                 fingerprint_verified=fp_verified
             )
 
-        # Verify receiver's biometrics passed authentication
+                                                            
         if not (face_verified and fp_verified):
             return AuthResponse(
                 success=False,
@@ -486,7 +486,7 @@ async def authenticate(request: AuthRequest):
 
         logger.info("✅ Receiver biometrics verified - using sender's key")
         
-        # Create receiver session with SENDER's key (same key!)
+                                                               
         session_id = base64.urlsafe_b64encode(os.urandom(16)).decode()
         state.active_sessions[session_id] = {
             'identity': 'receiver',
@@ -530,12 +530,12 @@ async def authenticate_continuous(request: ContinuousAuthRequest):
         if not state.face_auth.check_enrollment(request.identity):
             return {"success": False, "message": f"Face not enrolled for {request.identity}."}
 
-        # Handle data URL prefix
+                                
         img_data = request.image
         if "base64," in img_data:
             img_data = img_data.split("base64,")[1]
             
-        # Decode base64 to OpenCV image
+                                       
         img_bytes = base64.b64decode(img_data)
         np_arr = np.frombuffer(img_bytes, np.uint8)
         import cv2
@@ -544,7 +544,7 @@ async def authenticate_continuous(request: ContinuousAuthRequest):
         if img is None:
             return {"success": False, "message": "Could not decode captured image"}
             
-        # Verify face
+                     
         verified, confidence, msg = state.face_auth.verify_face(request.identity, image=img)
         
         return {
@@ -732,9 +732,9 @@ async def close_session(session_id: str):
         return {"success": True, "message": "Session closed"}
     raise HTTPException(status_code=404, detail="Session not found")
 
-# ==================== FILE SHARE ENDPOINTS ====================
-# Simple one-slot relay: sender uploads, receiver downloads.
-# Stored in AppState so it lives in memory (+ temp file on disk).
+                                                                
+                                                            
+                                                                 
 
 @app.post("/share/upload")
 async def share_upload(
@@ -748,7 +748,7 @@ async def share_upload(
     intended_receiver username (must be a registered receiver/both role).
     Only the designated receiver will be allowed to fetch this file.
     """
-    # Load users DB to validate roles
+                                     
     import json as _json_users
     users_path = Path(__file__).parent.parent / "data" / "users.json"
     try:
@@ -757,13 +757,13 @@ async def share_upload(
     except Exception:
         _all_users = {}
 
-    # Validate sender
+                     
     if sender_username not in _all_users:
         raise HTTPException(status_code=401, detail=f"Sender '{sender_username}' not found in user database")
     if _all_users[sender_username].get("role") not in ("sender", "both"):
         raise HTTPException(status_code=403, detail=f"'{sender_username}' does not have sender privileges")
 
-    # Validate intended_receiver
+                                
     if intended_receiver not in _all_users:
         raise HTTPException(status_code=400, detail=f"Receiver '{intended_receiver}' not found in user database")
     if _all_users[intended_receiver].get("role") not in ("receiver", "both"):
@@ -771,7 +771,7 @@ async def share_upload(
 
     TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Overwrite any previous shared file
+                                        
     if state.shared_file_path and Path(state.shared_file_path).exists():
         try:
             Path(state.shared_file_path).unlink()
@@ -810,14 +810,14 @@ async def share_status(requester_username: Optional[str] = None):
     if not state.shared_file_path or not Path(state.shared_file_path).exists():
         return {"available": False}
 
-    # If no intended_receiver was set, legacy behaviour — allow (should not happen with new uploads)
+                                                                                                    
     if state.shared_intended_receiver is None:
         return {"available": False, "error": "File has no designated receiver — contact sender"}
 
-    # Reject if the requester is not the intended receiver
+                                                          
     if not requester_username or requester_username.strip() != state.shared_intended_receiver:
         logger.warning(f"🚫 Unauthorised status check by '{requester_username}' (intended: '{state.shared_intended_receiver}')")
-        return {"available": False}  # Do NOT reveal file existence to wrong user
+        return {"available": False}                                              
 
     return {
         "available": True,
@@ -837,7 +837,7 @@ async def share_download(requester_username: Optional[str] = None):
     if not state.shared_file_path or not Path(state.shared_file_path).exists():
         raise HTTPException(status_code=404, detail="No shared file available")
 
-    # Enforce receiver restriction
+                                  
     if state.shared_intended_receiver is not None:
         if not requester_username or requester_username.strip() != state.shared_intended_receiver:
             logger.warning(f"🚫 Unauthorised download attempt by '{requester_username}' (intended: '{state.shared_intended_receiver}')")
@@ -846,7 +846,7 @@ async def share_download(requester_username: Optional[str] = None):
                 detail=f"Access denied. This file was not shared with you."
             )
     else:
-        # Safety: if no intended_receiver set, block all downloads (force re-upload)
+                                                                                    
         raise HTTPException(status_code=403, detail="File has no designated receiver — sender must re-upload")
 
     path = Path(state.shared_file_path)
@@ -859,7 +859,7 @@ async def share_download(requester_username: Optional[str] = None):
         media_type="application/octet-stream",
     )
 
-# ==================== END FILE SHARE ENDPOINTS ====================
+                                                                    
 
 @app.on_event("startup")
 
@@ -889,12 +889,12 @@ def _launch_frontend():
 
     project_root = Path(__file__).parent.parent
     frontend_script = project_root / "frontend" / "app.py"
-    frontend_port = DEFAULT_SENDER_PORT  # 8501
+    frontend_port = DEFAULT_SENDER_PORT        
 
     logger.info(f"🖥  Launching Streamlit frontend → http://localhost:{frontend_port}")
     try:
         if platform.system() == "Windows":
-            # On Windows use shell=True with a plain string command — most reliable
+                                                                                   
             cmd = (
                 f'streamlit run "{frontend_script}" '
                 f'--server.port {frontend_port} '
@@ -911,7 +911,7 @@ def _launch_frontend():
                     "--browser.gatherUsageStats", "false"]
             subprocess.Popen(cmd, cwd=str(project_root))
 
-        # Give Streamlit a moment to boot, then open the browser
+                                                                
         _time.sleep(4)
         webbrowser.open(f"http://localhost:{frontend_port}")
         logger.info(f"✅ Browser opened at http://localhost:{frontend_port}")
@@ -921,7 +921,7 @@ def _launch_frontend():
 
 
 if __name__ == "__main__":
-    # Start frontend in background thread so backend starts immediately
+                                                                       
     frontend_thread = threading.Thread(target=_launch_frontend, daemon=True)
     frontend_thread.start()
 
@@ -929,6 +929,6 @@ if __name__ == "__main__":
         "main:app",
         host=DEFAULT_HOST,
         port=DEFAULT_BACKEND_PORT,
-        reload=False,          # reload=True conflicts with threading; use False here
+        reload=False,                                                                
         log_level="info"
     )

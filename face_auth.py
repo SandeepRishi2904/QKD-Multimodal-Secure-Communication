@@ -30,7 +30,7 @@ class FaceAuthenticator:
         self.detector = detector
         self.embedding_size = FACE_EMBEDDING_SIZE
 
-        # Initialize model (downloads on first run)
+                                                   
         try:
             logger.info(f"Initializing face model: {model_name}")
             self.model = DeepFace.build_model(model_name)
@@ -50,9 +50,9 @@ class FaceAuthenticator:
         Returns:
             Captured face image or None if failed
         """
-        # Try multiple camera indices
+                                     
         cap = None
-        for idx in range(3):  # Try indices 0, 1, 2
+        for idx in range(3):                       
             logger.info(f"Trying camera index {idx}...")
             cap = cv2.VideoCapture(idx)
             if cap.isOpened():
@@ -70,7 +70,7 @@ class FaceAuthenticator:
             logger.info("  3. Try a different camera index")
             return None
 
-        # Load OpenCV's Haar Cascade for face detection (faster than DeepFace)
+                                                                              
         face_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
         )
@@ -87,10 +87,10 @@ class FaceAuthenticator:
             if not ret:
                 continue
 
-            # Convert to grayscale for faster detection
+                                                       
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            # Detect faces using Haar Cascade (much faster)
+                                                           
             faces = face_cascade.detectMultiScale(
                 gray, 
                 scaleFactor=1.1, 
@@ -99,7 +99,7 @@ class FaceAuthenticator:
             )
 
             if len(faces) > 0:
-                # Draw rectangle around detected face
+                                                     
                 for (x, y, w, h) in faces:
                     cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
                 cv2.putText(frame, "Face Detected - Press SPACE to capture", 
@@ -111,28 +111,28 @@ class FaceAuthenticator:
                            (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
                 face_detected = False
 
-            # Show frame
+                        
             cv2.imshow("Face Capture", frame)
 
-            # Check for key press
+                                 
             key = cv2.waitKey(1) & 0xFF
 
-            # Press SPACE to capture - even if no face detected, capture anyway
-            if key == 32:  # SPACE key
+                                                                               
+            if key == 32:             
                 logger.info("✅ Capture button pressed")
                 if not face_detected:
-                    # Capture anyway even if no face detected
+                                                             
                     logger.info("No face detected, but capturing anyway for enrollment")
                     captured_frame = frame.copy()
                 break
 
-            # Press ESC to cancel
-            if key == 27:  # ESC key
+                                 
+            if key == 27:           
                 logger.info("Capture cancelled")
                 captured_frame = None
                 break
 
-            # Check timeout
+                           
             elapsed = (cv2.getTickCount() - start_time) / cv2.getTickFrequency()
             if elapsed > timeout:
                 logger.warning("⏱️  Capture timeout")
@@ -161,9 +161,9 @@ class FaceAuthenticator:
         import os
         
         try:
-            # If input is a numpy array, save to temp file
+                                                          
             if isinstance(image_path_or_array, np.ndarray):
-                # Save to temporary file
+                                        
                 temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
                 temp_path = temp_file.name
                 cv2.imwrite(temp_path, image_path_or_array)
@@ -171,39 +171,39 @@ class FaceAuthenticator:
             else:
                 img_to_process = image_path_or_array
             
-            # Use DeepFace represent function
+                                             
             embeddings = DeepFace.represent(
                 img_path=img_to_process,
                 model_name=self.model_name,
                 detector_backend=self.detector,
-                enforce_detection=False  # Don't enforce to allow enrollment without face detection
+                enforce_detection=False                                                            
             )
 
-            # Clean up temp file
+                                
             if isinstance(image_path_or_array, np.ndarray) and os.path.exists(temp_path):
-                time.sleep(0.5)  # small delay
+                time.sleep(0.5)               
                 try:
                     os.remove(temp_path)
                 except:
                     pass
 
             if embeddings and len(embeddings) > 0:
-                # Handle different return formats
+                                                 
                 result = embeddings[0]
                 
-                # If result is a dictionary with 'embedding' key
+                                                                
                 if isinstance(result, dict) and 'embedding' in result:
                     return np.array(result['embedding'])
                 
-                # If result is already an array/tuple
+                                                     
                 elif isinstance(result, (np.ndarray, tuple, list)):
                     return np.array(result)
                 
-                # If result is a tuple/list of (embedding, something)
+                                                                     
                 elif isinstance(result, (tuple, list)) and len(result) > 0:
                     return np.array(result[0])
                 
-                # Try to find embedding anywhere in the result
+                                                              
                 else:
                     logger.warning(f"Unexpected DeepFace.represent format: {type(result)}")
                     return None
@@ -233,21 +233,21 @@ class FaceAuthenticator:
 
         template_path = SENDER_FACE_TEMPLATE if identity == 'sender' else RECEIVER_FACE_TEMPLATE
 
-        # Capture if no image provided
+                                      
         if image is None:
             logger.info(f"Capturing face for {identity}...")
             image = self.capture_face(camera_index)
             if image is None:
                 return False, "Failed to capture face"
 
-        # Get embedding
+                       
         logger.info("Extracting face embedding...")
         embedding = self.get_embedding(image)
 
         if embedding is None:
             return False, "Failed to extract face features"
 
-        # Save template
+                       
         try:
             template_data = {
                 'embedding': embedding,
@@ -283,7 +283,7 @@ class FaceAuthenticator:
 
         template_path = SENDER_FACE_TEMPLATE if identity == 'sender' else RECEIVER_FACE_TEMPLATE
 
-        # Load template
+                       
         if not template_path.exists():
             return False, 0.0, f"No enrolled template found for {identity}. Please enroll first."
 
@@ -296,19 +296,19 @@ class FaceAuthenticator:
         except Exception as e:
             return False, 0.0, f"Failed to load template: {e}"
 
-        # Capture if no image provided
+                                      
         if image is None:
             logger.info(f"Capturing face for verification ({identity})...")
             image = self.capture_face(camera_index)
             if image is None:
                 return False, 0.0, "Failed to capture face for verification"
 
-        # Get current embedding from the captured image
+                                                       
         current_embedding = self.get_embedding(image)
         if current_embedding is None:
             return False, 0.0, "Failed to extract face features — ensure face is clearly visible"
 
-        # Direct cosine similarity between stored and live embeddings
+                                                                     
         try:
             similarity = self._calculate_similarity(stored_embedding, current_embedding)
             verified = similarity >= FACE_SIMILARITY_THRESHOLD
@@ -326,11 +326,11 @@ class FaceAuthenticator:
 
     def _calculate_similarity(self, embedding1: np.ndarray, embedding2: np.ndarray) -> float:
         """Calculate cosine similarity between two embeddings"""
-        # Normalize
+                   
         e1_norm = embedding1 / np.linalg.norm(embedding1)
         e2_norm = embedding2 / np.linalg.norm(embedding2)
 
-        # Cosine similarity
+                           
         return float(np.dot(e1_norm, e2_norm))
 
     def get_embedding_for_fusion(self, identity: str, image=None, camera_index: int = 0) -> Optional[bytes]:
@@ -349,7 +349,7 @@ class FaceAuthenticator:
         if embedding is None:
             return None
 
-        # Hash embedding to fixed size for key fusion
+                                                     
         embedding_bytes = embedding.astype(np.float32).tobytes()
         return hashlib.sha256(embedding_bytes).digest()
 

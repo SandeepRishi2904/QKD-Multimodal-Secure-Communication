@@ -15,7 +15,7 @@ import time
 import numpy as np
 from pathlib import Path
 
-# ── Page config ───────────────────────────────────────────────────────────────
+                                                                                
 st.set_page_config(
     page_title="QSec — Quantum Secure Gateway",
     page_icon="🔐",
@@ -23,7 +23,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ── Shared CSS — Dark quantum aesthetic ──────────────────────────────────────
+                                                                               
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Exo+2:wght@200;300;400;600&display=swap');
@@ -288,13 +288,13 @@ html, body, [class*="css"] {
 </style>
 """, unsafe_allow_html=True)
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
+                                                                                
 USER_DB  = Path("data/users.json")
 FACE_DIR = Path("data/face_templates")
 USER_DB.parent.mkdir(parents=True, exist_ok=True)
 FACE_DIR.mkdir(parents=True, exist_ok=True)
 
-# ── User helpers ──────────────────────────────────────────────────────────────
+                                                                                
 def load_users() -> dict:
     if USER_DB.exists():
         with open(USER_DB) as f:
@@ -337,13 +337,13 @@ def mark_enrolled(uname: str) -> None:
         users[uname]["enrolled_at"] = time.time()
         save_users(users)
 
-# ── Session defaults ──────────────────────────────────────────────────────────
+                                                                                
 for key, val in {
     "authenticated": False,
     "username": None,
     "role": None,
     "enrolled": False,
-    "current_page": "__login__",   # __login__ = show login UI
+    "current_page": "__login__",                              
     "session_log": [],
     "rekey_count": 0,
     "qber_history": [],
@@ -359,12 +359,12 @@ for key, val in {
     if key not in st.session_state:
         st.session_state[key] = val
 
-# ── Helper: add log entry ─────────────────────────────────────────────────────
+                                                                                
 def ts(): return time.strftime("%H:%M:%S")
 def add_log(msg, level="info"):
     st.session_state.session_log.append({"ts": ts(), "msg": msg, "level": level})
 
-# ── Hero (only on login screen) ───────────────────────────────────────────────
+                                                                                
 if st.session_state.current_page == "__login__":
     st.markdown("""
     <div class="qsec-hero">
@@ -381,9 +381,9 @@ if st.session_state.current_page == "__login__":
     </div>
     """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# LOGIN SCREEN
-# ══════════════════════════════════════════════════════════════════════════════
+                                                                                
+              
+                                                                                
 if st.session_state.current_page == "__login__":
     tab_login, tab_register = st.tabs(["  Sign In  ", "  Register  "])
 
@@ -429,20 +429,20 @@ if st.session_state.current_page == "__login__":
             else:
                 st.error(f"✗  Username '{new_user}' already exists.")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# AUTHENTICATED — load full dashboard from streamlit_app.py
-# ══════════════════════════════════════════════════════════════════════════════
+                                                                                
+                                                           
+                                                                                
 elif st.session_state.authenticated:
-    # ── Delegate to the full operations dashboard ───────────────────────────
-    # streamlit_app.py contains all pages (Dashboard, Encrypt, Decrypt, etc.)
-    # We exec() it in this same Python scope so it shares session_state and
-    # the page_config already set above. The auth guard inside streamlit_app.py
-    # is bypassed because session_state.authenticated is already True.
+                                                                              
+                                                                             
+                                                                           
+                                                                               
+                                                                      
     _dashboard = Path(__file__).parent / "streamlit_app.py"
     exec(compile(_dashboard.read_text(encoding="utf-8"), str(_dashboard), "exec"),
          {**globals(), "__file__": str(_dashboard)})
 
-# ── Footer (login screen only — dashboard has its own) ────────────────────────
+                                                                                
 if st.session_state.current_page == "__login__":
     st.markdown("""
 <div class="qfooter">

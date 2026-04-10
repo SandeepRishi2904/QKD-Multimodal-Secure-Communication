@@ -58,12 +58,12 @@ class AESCrypto:
                 raise ValueError(f"Key must be {AES_KEY_SIZE} bytes for AES-256")
             self.key = key
 
-        # INNOVATION 3: Re-key audit log
+                                        
         self._rekey_log: List[Dict[str, Any]] = []
         self._key_created_at: float = time.time()
         self._encrypt_count: int = 0
 
-    # ── INNOVATION 3: Hot key rotation ────────────────────────────────────────
+                                                                                
 
     def update_key(self, new_key: bytes, reason: str = "adaptive_rekey") -> None:
         """
@@ -122,7 +122,7 @@ class AESCrypto:
             'rekey_log': self._rekey_log,
         }
 
-    # ── Core encryption ────────────────────────────────────────────────────────
+                                                                                 
 
     @staticmethod
     def generate_key() -> bytes:
@@ -195,7 +195,7 @@ class AESCrypto:
 
         return decryptor.update(ciphertext) + decryptor.finalize()
 
-    # ── File-level operations ──────────────────────────────────────────────────
+                                                                                 
 
     def encrypt_file(
         self,
@@ -235,7 +235,7 @@ class AESCrypto:
             'original_size': len(plaintext),
             'compressed': compress,
             'compression': 'zlib' if compress else None,
-            # INNOVATION 3: embed key fingerprint for audit
+                                                           
             'key_fingerprint': self.get_key_fingerprint(),
             'rekey_count': len(self._rekey_log),
         }
@@ -311,7 +311,7 @@ class AESCrypto:
             'metadata': metadata,
         }
 
-    # ── Byte-level convenience methods ────────────────────────────────────────
+                                                                                
 
     def encrypt_bytes(self, data: bytes, associated_data: Optional[bytes] = None) -> bytes:
         """Encrypt and return packed bytes: nonce + tag + ciphertext."""
@@ -325,7 +325,7 @@ class AESCrypto:
         ciphertext = packed_data[AES_NONCE_SIZE + AES_TAG_SIZE:]
         return self.decrypt(ciphertext, nonce, tag, associated_data)
 
-    # ── Utility ────────────────────────────────────────────────────────────────
+                                                                                 
 
     @staticmethod
     def derive_key_from_password(

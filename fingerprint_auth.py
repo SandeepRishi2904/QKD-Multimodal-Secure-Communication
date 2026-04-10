@@ -55,7 +55,7 @@ class FingerprintAuthenticator:
         try:
             from pyfingerprint.pyfingerprint import PyFingerprint
 
-            # Auto-detect port if not specified
+                                               
             if self.port is None:
                 self.port = self._detect_serial_port()
 
@@ -78,14 +78,14 @@ class FingerprintAuthenticator:
         """Auto-detect fingerprint sensor port"""
         import serial.tools.list_ports
 
-        # Common fingerprint sensor VID/PID combinations
+                                                        
         known_devices = [
-            (0x1A86, 0x7523),  # CH340
-            (0x0403, 0x6001),  # FT232
-            (0x0Bca, 0x2100),  # Access FM220U
-            (0x1a86, 0x7523),  # CH340 (lowercase)
-            (0x0403, 0x6001),  # FT232 (lowercase)
-            (0x0bca, 0x2100),  # Access FM220U (lowercase)
+            (0x1A86, 0x7523),         
+            (0x0403, 0x6001),         
+            (0x0Bca, 0x2100),                 
+            (0x1a86, 0x7523),                     
+            (0x0403, 0x6001),                     
+            (0x0bca, 0x2100),                             
         ]
 
         ports = list(serial.tools.list_ports.comports())
@@ -95,25 +95,25 @@ class FingerprintAuthenticator:
         for port in ports:
             logger.info(f"   Port: {port.device}, Description: {port.description}, VID: {port.vid}, PID: {port.pid}")
             
-            # Check for known devices
+                                     
             if hasattr(port, 'vid') and hasattr(port, 'pid') and port.vid is not None and port.pid is not None:
                 if (port.vid, port.pid) in known_devices:
                     logger.info(f"✅ Found known fingerprint device on {port.device}")
                     return port.device
 
-            # Check description for fingerprint keywords
+                                                        
             desc_lower = port.description.lower() if port.description else ""
             if 'fingerprint' in desc_lower or 'fm220' in desc_lower or 'access' in desc_lower:
                 logger.info(f"✅ Found fingerprint device by description on {port.device}")
                 return port.device
 
-            # Check device name for common patterns
+                                                   
             device_lower = port.device.lower() if port.device else ""
             if 'usb' in device_lower:
                 logger.info(f"✅ Found USB device on {port.device}, trying it...")
                 return port.device
 
-        # Default fallback - try first available port
+                                                     
         if len(ports) > 0:
             logger.warning(f"⚠️  No known fingerprint device found, using fallback: {ports[0].device}")
             return ports[0].device
@@ -122,9 +122,9 @@ class FingerprintAuthenticator:
 
     def _generate_simulated_template(self) -> bytes:
         """Generate a simulated fingerprint template (for testing)"""
-        # Generate consistent but unique template based on time
+                                                               
         np.random.seed(int(time.time() * 1000) % 10000)
-        template = np.random.bytes(512)  # 512 bytes template
+        template = np.random.bytes(512)                      
         return template
 
     def capture_fingerprint(self, timeout: int = FINGERPRINT_TIMEOUT) -> Tuple[bool, Optional[bytes]]:
@@ -136,7 +136,7 @@ class FingerprintAuthenticator:
         """
         if self.use_simulation:
             logger.info("🖐️  Place your finger on the sensor (simulated)...")
-            time.sleep(2)  # Simulate scanning time
+            time.sleep(2)                          
             template = self._generate_simulated_template()
             logger.info("✅ Fingerprint captured (simulated)")
             return True, template
@@ -149,7 +149,7 @@ class FingerprintAuthenticator:
 
             logger.info("🖐️  Place your finger on the sensor...")
 
-            # Wait for finger
+                             
             start_time = time.time()
             while not self.sensor.readImage():
                 if time.time() - start_time > timeout:
@@ -159,10 +159,10 @@ class FingerprintAuthenticator:
 
             logger.info("✅ Finger detected, converting...")
 
-            # Convert image to template
+                                       
             self.sensor.convertImage(0x01)
 
-            # Download characteristics
+                                      
             characteristics = self.sensor.downloadCharacteristics(0x01)
 
             logger.info("✅ Fingerprint captured successfully")
@@ -189,12 +189,12 @@ class FingerprintAuthenticator:
         template_path = SENDER_FINGERPRINT_TEMPLATE if identity == 'sender' else RECEIVER_FINGERPRINT_TEMPLATE
 
         if self.use_simulation:
-            # Simulation mode - capture once
+                                            
             success, template = self.capture_fingerprint()
             if not success:
                 return False, "Failed to capture fingerprint"
 
-            # Save template
+                           
             template_data = {
                 'template': template,
                 'identity': identity,
@@ -207,7 +207,7 @@ class FingerprintAuthenticator:
 
             return True, f"Fingerprint enrolled for {identity} (simulated)"
 
-        # Hardware mode
+                       
         try:
             logger.info(f"Enrolling fingerprint for {identity}...")
             logger.info(f"Need {samples} samples...")
@@ -216,14 +216,14 @@ class FingerprintAuthenticator:
             for i in range(samples):
                 logger.info(f"Sample {i+1}/{samples}: Place finger...")
 
-                # Wait for finger
+                                 
                 while not self.sensor.readImage():
                     time.sleep(0.1)
 
                 self.sensor.convertImage(0x01)
 
                 if i > 0:
-                    # Compare with first sample
+                                               
                     if not self.sensor.compareCharacteristics():
                         logger.warning("❌ Fingers do not match, try again")
                         i -= 1
@@ -236,11 +236,11 @@ class FingerprintAuthenticator:
 
                 templates.append(self.sensor.downloadCharacteristics(0x01))
 
-            # Create template
+                             
             self.sensor.createTemplate()
             position = self.sensor.storeTemplate()
 
-            # Save to file
+                          
             template_data = {
                 'position': position,
                 'identity': identity,
@@ -273,26 +273,26 @@ class FingerprintAuthenticator:
         if not template_path.exists():
             return False, 0.0, f"No enrolled template found for {identity}"
 
-        # Load stored template
+                              
         try:
             with open(template_path, 'rb') as f:
                 stored_data = pickle.load(f)
         except Exception as e:
             return False, 0.0, f"Failed to load template: {e}"
 
-        # Capture current fingerprint
+                                     
         success, current_template = self.capture_fingerprint()
         if not success:
             return False, 0.0, "Failed to capture fingerprint"
 
         if self.use_simulation:
-            # Simulation: compare hashes
+                                        
             stored_hash = hashlib.sha256(stored_data['template']).hexdigest()
             current_hash = hashlib.sha256(current_template).hexdigest()
 
-            # In simulation, we accept the capture (for demo purposes)
-            # In real scenario, this would compare templates
-            confidence = 0.95  # Simulated high confidence
+                                                                      
+                                                            
+            confidence = 0.95                             
             verified = True
 
             if verified:
@@ -300,19 +300,19 @@ class FingerprintAuthenticator:
             else:
                 return False, confidence, "Fingerprint mismatch"
 
-        # Hardware verification
+                               
         try:
-            # Search in sensor memory
+                                     
             position = stored_data.get('position', 0)
 
             self.sensor.loadTemplate(position, 0x01)
 
-            # Search
+                    
             result = self.sensor.searchTemplate()
 
             if result[0] >= 0:
-                confidence = result[1] / 100.0  # Convert score to 0-1
-                if confidence > 0.6:  # Threshold
+                confidence = result[1] / 100.0                        
+                if confidence > 0.6:             
                     return True, confidence, "Fingerprint verified successfully"
                 else:
                     return False, confidence, "Low confidence match"
@@ -340,7 +340,7 @@ class FingerprintAuthenticator:
             if 'template' in data:
                 return hashlib.sha256(data['template']).digest()
             else:
-                # Use position and timestamp for hardware mode
+                                                              
                 seed = f"{data.get('position', 0)}-{data.get('timestamp', 0)}"
                 return hashlib.sha256(seed.encode()).digest()
 
@@ -396,7 +396,7 @@ class FingerprintAuthenticator:
         """Close sensor connection"""
         if self.is_hardware and self.sensor:
             try:
-                # pyfingerprint doesn't have explicit close, but we can clean up
+                                                                                
                 pass
             except:
                 pass

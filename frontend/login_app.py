@@ -13,7 +13,7 @@ import os
 import time
 from pathlib import Path
 
-# ── Page config ───────────────────────────────────────────────────────────────
+                                                                                
 st.set_page_config(
     page_title="QSec — Quantum Secure Gateway",
     page_icon="🔐",
@@ -21,7 +21,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ── CSS — Dark quantum aesthetic ──────────────────────────────────────────────
+                                                                                
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Exo+2:wght@200;300;400;600&display=swap');
@@ -282,7 +282,7 @@ html, body, [class*="css"] {
 </style>
 """, unsafe_allow_html=True)
 
-# ── User store ────────────────────────────────────────────────────────────────
+                                                                                
 USER_DB = Path("data/users.json")
 USER_DB.parent.mkdir(parents=True, exist_ok=True)
 
@@ -322,7 +322,7 @@ def is_enrolled(username: str) -> bool:
     users = load_users()
     return users.get(username, {}).get("enrolled", False)
 
-# ── Session defaults ──────────────────────────────────────────────────────────
+                                                                                
 for key, val in {
     "authenticated": False,
     "username": None,
@@ -332,7 +332,7 @@ for key, val in {
     if key not in st.session_state:
         st.session_state[key] = val
 
-# ── Hero ──────────────────────────────────────────────────────────────────────
+                                                                                
 st.markdown("""
 <div class="qsec-hero">
     <div class="qsec-logo">◈ Quantum Secure Communications ◈</div>
@@ -341,7 +341,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Innovation badges ─────────────────────────────────────────────────────────
+                                                                                
 st.markdown("""
 <div class="inno-row">
     <span class="badge badge-cyan">BQES · Biometric Entropy Seeding</span>
@@ -350,7 +350,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Authenticated view ────────────────────────────────────────────────────────
+                                                                                
 if st.session_state.authenticated:
     enrolled = is_enrolled(st.session_state.username)
 
@@ -364,7 +364,7 @@ if st.session_state.authenticated:
     </div>
     """, unsafe_allow_html=True)
 
-    # Always allow direct access — no enrollment gate
+                                                     
     st.success("✓  Authentication successful. Access granted.")
 
     col1, col2 = st.columns(2)
@@ -382,7 +382,7 @@ if st.session_state.authenticated:
                 st.session_state[k] = None if k not in ("authenticated", "enrolled") else False
             st.rerun()
 
-    # Enrollment shown as optional upgrade, not a blocker
+                                                         
     if not enrolled:
         st.markdown('<hr class="qdivider">', unsafe_allow_html=True)
         st.markdown("""
@@ -401,7 +401,7 @@ if st.session_state.authenticated:
     else:
         st.info("→  Biometrics active. All three innovations (BQES · QNLD · ARK) will run during operations.")
 
-# ── Login / Register ──────────────────────────────────────────────────────────
+                                                                                
 else:
     tab_login, tab_register = st.tabs(["  Sign In  ", "  Register  "])
 
@@ -455,7 +455,7 @@ else:
             else:
                 st.error(f"✗  Username '{new_user}' already exists.")
 
-# ── System status panel ───────────────────────────────────────────────────────
+                                                                                
 st.markdown('<hr class="qdivider">', unsafe_allow_html=True)
 st.markdown('<div class="qsec-card"><div class="card-title">◈ System Status</div>', unsafe_allow_html=True)
 
@@ -480,7 +480,7 @@ st.markdown(f"""
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ── Footer ────────────────────────────────────────────────────────────────────
+                                                                                
 st.markdown("""
 <div class="qfooter">
     QSEC MULTIMODAL SECURE COMM · BB84 + AES-256-GCM · BQES · QNLD · ADAPTIVE RE-KEYING<br>

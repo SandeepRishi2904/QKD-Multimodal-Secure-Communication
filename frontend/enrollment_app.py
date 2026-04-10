@@ -20,7 +20,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ── Shared CSS (same design system) ──────────────────────────────────────────
+                                                                               
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Exo+2:wght@200;300;400;600&display=swap');
@@ -69,7 +69,7 @@ html,body,[class*="css"]{ font-family:var(--body); background-color:var(--bg-dee
 </style>
 """, unsafe_allow_html=True)
 
-# ── Auth guard (with URL-param hydration from ops panel) ─────────────────────
+                                                                               
 try:
     _ep = dict(st.query_params)
     _eu = _ep.get("auth_user", "")
@@ -121,7 +121,7 @@ def mark_enrolled(uname):
         users[uname]["enrolled_at"] = time.time()
         with open(USER_DB, "w") as f: json.dump(users, f, indent=2)
 
-# ── Page header ───────────────────────────────────────────────────────────────
+                                                                                
 st.markdown(f"""
 <div class="page-header">
     <div class="page-label">◈ Biometric Enrollment Center</div>
@@ -133,7 +133,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Innovation explainer ──────────────────────────────────────────────────────
+                                                                                
 with st.expander("▸ How BQES & QNLD use your biometrics"):
     st.markdown("""
     <div class="mono-info">
@@ -151,7 +151,7 @@ with st.expander("▸ How BQES & QNLD use your biometrics"):
     </div>
     """, unsafe_allow_html=True)
 
-# ── Enrollment state ──────────────────────────────────────────────────────────
+                                                                                
 users = load_users()
 already_enrolled = users.get(username, {}).get("enrolled", False)
 
@@ -159,7 +159,7 @@ face_path = FACE_DIR / f"{username}_embedding.npy"
 face_done = face_path.exists()
 fp_done   = users.get(username, {}).get("fingerprint_enrolled", False)
 
-# Progress indicator
+                    
 steps_done = sum([face_done, fp_done])
 pct = int(steps_done / 2 * 100)
 
@@ -189,7 +189,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Face Enrollment ───────────────────────────────────────────────────────────
+                                                                                
 st.markdown('<div class="qcard"><div class="card-title">◈ Step 01 — Face Enrollment</div>', unsafe_allow_html=True)
 
 if face_done:
@@ -245,7 +245,7 @@ else:
                     st.error("✗  No face detected. Ensure camera access and good lighting.")
 
             except ImportError:
-                # Demo mode — save a simulated embedding
+                                                        
                 st.warning("⚠  DeepFace not found — saving simulated embedding for demo.")
                 demo_embedding = np.random.randn(512).astype(np.float32)
                 demo_embedding /= np.linalg.norm(demo_embedding)
@@ -258,7 +258,7 @@ else:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ── Fingerprint Enrollment ────────────────────────────────────────────────────
+                                                                                
 st.markdown('<div class="qcard"><div class="card-title">◈ Step 02 — Fingerprint Enrollment</div>', unsafe_allow_html=True)
 
 if fp_done:
@@ -287,11 +287,11 @@ else:
                     token = sec.token_hex(32)
                     method_label = "Simulated"
                 elif "FM220U" in fp_method:
-                    # Placeholder for FM220U SDK integration
+                                                            
                     token = __import__('secrets').token_hex(32)
                     method_label = "FM220U"
                 else:
-                    # Windows Hello integration
+                                               
                     import ctypes
                     token = __import__('secrets').token_hex(32)
                     method_label = "Windows Hello"
@@ -313,7 +313,7 @@ else:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ── Finalise enrollment ───────────────────────────────────────────────────────
+                                                                                
 if face_done and fp_done:
     st.markdown('<div class="qcard"><div class="card-title">◈ Finalise Enrollment</div>', unsafe_allow_html=True)
 
@@ -331,7 +331,7 @@ if face_done and fp_done:
         if st.button("◈ Finalise & Activate Operator →", key="finalise"):
             with st.spinner("Seeding quantum noise profile · Activating operator..."):
                 mark_enrolled(username)
-                # Seed initial liveness profile with 1 baseline session
+                                                                       
                 try:
                     from bb84 import BB84Protocol
                     protocol = BB84Protocol()
@@ -349,7 +349,7 @@ if face_done and fp_done:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ── Footer ────────────────────────────────────────────────────────────────────
+                                                                                
 st.markdown("""
 <div class="qfooter">
     ENROLLMENT CENTER · BIOMETRIC DATA STORED WITH AES-256 PROTECTION · QSEC v2.0

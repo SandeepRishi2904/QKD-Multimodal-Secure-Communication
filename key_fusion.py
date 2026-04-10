@@ -32,10 +32,10 @@ from config import HKDF_INFO, SALT_SIZE, AES_KEY_SIZE
 
 logger = logging.getLogger(__name__)
 
-# ── INNOVATION 3 thresholds ────────────────────────────────────────────────────
-REKEY_SIMILARITY_THRESHOLD = 0.75   # Trigger re-key if cosine similarity drops below this
-REKEY_COOLDOWN_SECONDS = 10         # Minimum seconds between consecutive re-keys
-REKEY_CHECK_INTERVAL_SECONDS = 2    # How often to poll the live similarity score
+                                                                                 
+REKEY_SIMILARITY_THRESHOLD = 0.75                                                         
+REKEY_COOLDOWN_SECONDS = 10                                                      
+REKEY_CHECK_INTERVAL_SECONDS = 2                                                 
 
 
 class BiometricEntropyExtractor:
@@ -129,7 +129,7 @@ class KeyFusion:
         self.info = HKDF_INFO
         self.extractor = BiometricEntropyExtractor()
 
-    # ── INNOVATION 1: Biometric-to-bytes helpers ───────────────────────────────
+                                                                                 
 
     def prepare_face_seed(self, face_embedding: List[float]) -> bytes:
         """
@@ -148,7 +148,7 @@ class KeyFusion:
         logger.debug(f"[BQES] Fingerprint seed prepared: {seed.hex()[:16]}...")
         return seed
 
-    # ── Core key fusion ────────────────────────────────────────────────────────
+                                                                                 
 
     def fuse_keys(
         self,
@@ -267,7 +267,7 @@ class KeyFusion:
         return key1 == key2
 
 
-# ── INNOVATION 3: Adaptive Re-keying Monitor ──────────────────────────────────
+                                                                                
 
 class AdaptiveRekeyMonitor:
     """
@@ -334,9 +334,9 @@ class AdaptiveRekeyMonitor:
 
         self.extractor = BiometricEntropyExtractor()
 
-        # History for monitoring/logging
-        self.similarity_history: List[Tuple[float, float]] = []   # (timestamp, score)
-        self.rekey_events: List[Tuple[float, float]] = []          # (timestamp, score)
+                                        
+        self.similarity_history: List[Tuple[float, float]] = []                       
+        self.rekey_events: List[Tuple[float, float]] = []                              
 
     def start(self) -> None:
         """Start the background monitoring thread."""
@@ -422,7 +422,7 @@ class AdaptiveRekeyMonitor:
         }
 
 
-# ── Deterministic variant (backward compatibility) ────────────────────────────
+                                                                                
 
 class DeterministicKeyFusion(KeyFusion):
     """

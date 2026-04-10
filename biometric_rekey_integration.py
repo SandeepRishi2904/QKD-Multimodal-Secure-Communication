@@ -98,7 +98,7 @@ class SecureSessionManager:
         self.session_bb84_result: Optional[BB84Result] = None
         self._started = False
 
-    # ── INNOVATION 1 + 2: Session startup ─────────────────────────────────────
+                                                                                
 
     def start(self) -> Dict[str, Any]:
         """
@@ -116,11 +116,11 @@ class SecureSessionManager:
         """
         logger.info(f"[Session] Starting secure session for '{self.user_id}'")
 
-        # ── Step 1: BQES — convert embeddings to seed bytes ──────────────────
+                                                                               
         face_seed = self.extractor.face_embedding_to_bytes(self.face_embedding)
         fp_seed = self.extractor.fingerprint_token_to_bytes(self.fingerprint_token)
 
-        # ── Step 2: BB84 with biometric-seeded bases ──────────────────────────
+                                                                                
         if self.qkd_shared_seed:
             det_bb84 = DeterministicBB84(seed=self.qkd_shared_seed)
             bb84_result = det_bb84.generate_deterministic_key(
@@ -138,7 +138,7 @@ class SecureSessionManager:
 
         self.session_bb84_result = bb84_result
 
-        # ── Step 3: Liveness gate ─────────────────────────────────────────────
+                                                                                
         if self.enable_liveness and bb84_result.liveness_passed is False:
             logger.error(f"[Session] BLOCKED — liveness check failed for '{self.user_id}'")
             raise PermissionError(
@@ -147,7 +147,7 @@ class SecureSessionManager:
                 "Possible replay/spoofing attack detected."
             )
 
-        # ── Step 4: Key fusion → AES-256 ─────────────────────────────────────
+                                                                               
         fused_key, salt = self.fusion.fuse_keys(
             qkd_key=bb84_result.key,
             face_hash=face_seed,
@@ -163,7 +163,7 @@ class SecureSessionManager:
             f"liveness={'passed' if bb84_result.liveness_passed is not False else 'skipped'}"
         )
 
-        # ── Step 5: Start Innovation 3 monitor ────────────────────────────────
+                                                                                
         if self.enable_adaptive_rekey:
             self.monitor = AdaptiveRekeyMonitor(
                 user_id=self.user_id,
@@ -185,7 +185,7 @@ class SecureSessionManager:
             'eavesdropping_detected': bb84_result.eavesdropping_detected,
         }
 
-    # ── INNOVATION 3: Re-key callback ─────────────────────────────────────────
+                                                                                
 
     def _on_rekey_triggered(self, user_id: str, similarity_score: float) -> None:
         """
@@ -202,11 +202,11 @@ class SecureSessionManager:
         face_seed = self.extractor.face_embedding_to_bytes(self.face_embedding)
         fp_seed = self.extractor.fingerprint_token_to_bytes(self.fingerprint_token)
 
-        # Fresh BB84 round (no liveness update during mid-session re-key)
+                                                                         
         new_bb84 = self.bb84.generate_key(
             face_embedding=face_seed,
             fingerprint_token=fp_seed,
-            user_id=None,               # Skip liveness update for re-key events
+            user_id=None,                                                       
             enable_liveness_check=False,
         )
 
@@ -222,7 +222,7 @@ class SecureSessionManager:
             reason=f"adaptive_rekey_similarity={similarity_score:.4f}",
         )
 
-    # ── Convenience wrappers ───────────────────────────────────────────────────
+                                                                                 
 
     def encrypt_file(self, file_path: str, output_path: Optional[str] = None) -> Dict[str, Any]:
         """Encrypt a file using the current (possibly rotated) AES key."""

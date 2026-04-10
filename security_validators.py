@@ -13,14 +13,14 @@ logger = logging.getLogger(__name__)
 class SecurityValidator:
     """Validates all inputs for security concerns"""
 
-    # Allowed file extensions
+                             
     ALLOWED_EXTENSIONS = {'.txt', '.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.gif', '.zip', '.json'}
 
-    # Dangerous patterns in filenames
+                                     
     DANGEROUS_PATTERNS = [
-        r'\.\.',  # Directory traversal
+        r'\.\.',                       
         r'[~#%&*{}\\:<>?/|"]', 
-        r'^(con|prn|aux|nul|com[0-9]|lpt[0-9])$',  # Windows reserved names
+        r'^(con|prn|aux|nul|com[0-9]|lpt[0-9])$',                          
     ]
 
     @staticmethod
@@ -32,16 +32,16 @@ class SecurityValidator:
         if not filename or len(filename) > 255:
             return False, "Invalid filename length"
 
-        # Check for directory traversal
+                                       
         if '..' in filename or '/' in filename or '\\' in filename:
             return False, "Directory traversal attempt detected"
 
-        # Check dangerous patterns
+                                  
         for pattern in SecurityValidator.DANGEROUS_PATTERNS:
             if re.search(pattern, filename, re.IGNORECASE):
                 return False, f"Dangerous pattern detected in filename"
 
-        # Check extension
+                         
         ext = Path(filename).suffix.lower()
         if ext not in SecurityValidator.ALLOWED_EXTENSIONS:
             return False, f"File extension '{ext}' not allowed"
@@ -56,7 +56,7 @@ class SecurityValidator:
         try:
             mime = magic.from_file(str(file_path), mime=True)
 
-            # Check for executable content
+                                          
             dangerous_mimes = [
                 'application/x-executable',
                 'application/x-dosexec',
@@ -92,13 +92,13 @@ class SecurityValidator:
         if not input_str:
             return ""
 
-        # Remove control characters
+                                   
         sanitized = re.sub(r'[\x00-\x1F\x7F]', '', input_str)
 
-        # Limit length
+                      
         sanitized = sanitized[:max_length]
 
-        # Strip whitespace
+                          
         return sanitized.strip()
 
 class BiometricValidator:
@@ -112,16 +112,16 @@ class BiometricValidator:
 
             img = Image.open(image_path)
 
-            # Check minimum dimensions
+                                      
             if img.width < 100 or img.height < 100:
                 return False, "Face image too small (min 100x100)"
 
-            # Check aspect ratio
+                                
             aspect = img.width / img.height
             if aspect < 0.5 or aspect > 2.0:
                 return False, "Invalid aspect ratio"
 
-            # Check color mode
+                              
             if img.mode not in ['RGB', 'RGBA', 'L']:
                 return False, "Invalid color mode"
 

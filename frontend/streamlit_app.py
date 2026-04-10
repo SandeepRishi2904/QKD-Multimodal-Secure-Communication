@@ -10,10 +10,10 @@ import numpy as np
 import hashlib
 from pathlib import Path
 import sys, os
-sys.path.insert(0, str(Path(__file__).parent.parent))  # so config is importable
+sys.path.insert(0, str(Path(__file__).parent.parent))                           
 from config import SENDER_BACKEND_URL
 
-# Only call set_page_config when running as standalone (not exec'd from app.py)
+                                                                               
 _is_standalone = Path(__file__).name == "streamlit_app.py" and not st.session_state.get("authenticated")
 if _is_standalone or not st.session_state.get("authenticated"):
     try:
@@ -24,9 +24,9 @@ if _is_standalone or not st.session_state.get("authenticated"):
             initial_sidebar_state="expanded",
         )
     except Exception:
-        pass  # already set by app.py
+        pass                         
 
-# ── CSS ───────────────────────────────────────────────────────────────────────
+                                                                                
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Exo+2:wght@200;300;400;600&display=swap');
@@ -124,7 +124,7 @@ html,body,[class*="css"]{font-family:var(--body);background-color:var(--bg-deep)
 </style>
 """, unsafe_allow_html=True)
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+                                                                                
 USER_DB  = Path("data/users.json")
 FACE_DIR = Path("data/face_templates")
 OUT_DIR  = Path("data/output_files")
@@ -151,14 +151,14 @@ def add_log(msg: str, level: str = "info"):
         st.session_state.session_log = []
     st.session_state.session_log.append({"ts": ts(), "msg": msg, "level": level})
 
-# ── Session defaults ──────────────────────────────────────────────────────────
+                                                                                
 defaults = {
     "authenticated": False, "username": None, "role": None, "enrolled": False,
     "session_log": [], "rekey_count": 0, "qber_history": [],
     "key_fingerprint": None, "liveness_passed": None,
     "active_operation": None,
     "current_page": "Dashboard",
-    # Continuous auth
+                     
     "cont_auth_active": False,
     "cont_auth_last_check": 0.0,
     "cont_auth_sim": None,
@@ -172,10 +172,10 @@ for k, v in defaults.items():
 
 import streamlit.components.v1 as _components
 
-# ── Continuous auth helpers ───────────────────────────────────────────────────
+                                                                                
 def _run_continuous_auth_check():
     """Run a background face auth check and update continuous auth state."""
-    face_seed, fp_seed, sim, liveness = run_biometric_auth()
+    face_seed, fp_seed, sim, liveness, err_msg = run_biometric_auth()
     st.session_state.cont_auth_sim      = sim
     st.session_state.cont_auth_ok       = liveness
     st.session_state.cont_auth_last_check = time.time()
@@ -183,7 +183,7 @@ def _run_continuous_auth_check():
         st.session_state.cont_auth_failures = 0
         st.session_state.cont_auth_blocked  = False
         add_log(f"Continuous auth OK — sim={sim:.4f}", "ok")
-        # Adaptive re-key if similarity drifts below threshold
+                                                              
         if sim < 0.75 and st.session_state.key_fingerprint:
             st.session_state.rekey_count += 1
             import secrets as _s
@@ -191,7 +191,8 @@ def _run_continuous_auth_check():
             add_log(f"ARK re-key #{st.session_state.rekey_count} — sim drift={sim:.4f}", "warn")
     else:
         st.session_state.cont_auth_failures += 1
-        add_log(f"Continuous auth FAILED — sim={sim:.4f} failures={st.session_state.cont_auth_failures}", "err")
+        reason = err_msg or f"sim={sim:.4f}"
+        add_log(f"Continuous auth FAILED — {reason} failures={st.session_state.cont_auth_failures}", "err")
         if st.session_state.cont_auth_failures >= 3:
             st.session_state.cont_auth_blocked = True
             add_log("Continuous auth BLOCKED — 3 consecutive failures", "err")
@@ -205,13 +206,13 @@ def _continuous_auth_widget(page_key: str):
     if not st.session_state.cont_auth_active:
         return
 
-    # On each render: check if 5 s have elapsed and run auth
+                                                            
     elapsed = time.time() - st.session_state.cont_auth_last_check
     if elapsed >= 3.0:
         _run_continuous_auth_check()
         elapsed = 0.0
 
-    # Status card
+                 
     sim   = st.session_state.cont_auth_sim
     ok    = st.session_state.cont_auth_ok
     fails = st.session_state.cont_auth_failures
@@ -252,48 +253,48 @@ def _continuous_auth_widget(page_key: str):
     if blocked:
         st.error("🔒  Continuous authentication BLOCKED after 3 failures. Re-run Step 01.")
 
-    # Hidden button the JS will click to trigger rerun (CSS-hidden for old Streamlit compat)
+                                                                                            
     tick_key = f"cont_auth_tick_{page_key}"
     st.markdown(
         f'<div id="cont-auth-tick-wrap-{page_key}" style="height:0;overflow:hidden;position:absolute;pointer-events:none;">',
         unsafe_allow_html=True
     )
     if st.button("⟳", key=tick_key, help="Continuous auth heartbeat"):
-        pass  # rerun is automatic on button press
+        pass                                      
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # JS timer — clicks the hidden button every 5 s (same-origin iframe → parent)
+                                                                                 
     _components.html(f"""
     <script>
-    (function() {{
+    (function() {{ 
         var delay = Math.max(300, {next_check * 1000 if next_check > 0 else 300});
-        setTimeout(function ticker() {{
-            try {{
+        setTimeout(function ticker() {{ 
+            try {{ 
                 var btns = window.parent.document.querySelectorAll('button');
-                for (var b of btns) {{
-                    if (b.title === 'Continuous auth heartbeat') {{
+                for (var b of btns) {{ 
+                    if (b.title === 'Continuous auth heartbeat') {{ 
                         b.click();
                         break;
-                    }}
-                }}
-            }} catch(e) {{}}
+                    }} 
+                }} 
+            }}  catch(e) {{ }} 
             setTimeout(ticker, 3000);
-        }}, delay);
-    }})();
+        }} , delay);
+    }} )();
     </script>
     """, height=0, scrolling=False)
 
-# ── Auth guard ────────────────────────────────────────────────────────────────
-# Accept auth token passed via URL query params from login_app (port 8501)
+                                                                                
+                                                                          
 try:
-    # Streamlit >= 1.30
+                       
     _raw_params = dict(st.query_params)
     _qp_user = _raw_params.get("auth_user", "")
     _qp_role = _raw_params.get("auth_role", "")
     def _clear_params():
         st.query_params.clear()
 except AttributeError:
-    # Streamlit < 1.30
+                      
     _raw_params = st.experimental_get_query_params()
     _qp_user = (_raw_params.get("auth_user") or [""])[0]
     _qp_role = (_raw_params.get("auth_role") or [""])[0]
@@ -301,7 +302,7 @@ except AttributeError:
         st.experimental_set_query_params()
 
 if _qp_user and not st.session_state.authenticated:
-    # Validate the user still exists in our DB
+                                              
     _db_users = load_users()
     if _qp_user in _db_users:
         st.session_state.authenticated = True
@@ -330,7 +331,7 @@ role     = st.session_state.get("role", "sender")
 users    = load_users()
 enrolled = users.get(username, {}).get("enrolled", False)
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+                                                                                
 with st.sidebar:
     st.markdown(f"""
     <div style="text-align:center;padding:1rem 0 1.5rem;border-bottom:1px solid var(--border);margin-bottom:1rem;">
@@ -350,7 +351,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # Navigation
+                
     st.markdown('<div class="sidebar-label">Navigation</div>', unsafe_allow_html=True)
     pages = ["Dashboard", "Encrypt & Send", "Decrypt & Receive", "Live Auth Monitor", "Session Log", "Enrollment"]
     if "current_page" not in st.session_state:
@@ -362,7 +363,7 @@ with st.sidebar:
             st.session_state.current_page = p
             st.rerun()
 
-    # Innovation status
+                       
     st.markdown('<div class="sidebar-label" style="margin-top:1.2rem;">Innovation Status</div>', unsafe_allow_html=True)
     st.markdown("""
     <div class="mono-info">
@@ -372,7 +373,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # Sign out
+              
     st.markdown('<div style="margin-top:2rem;">', unsafe_allow_html=True)
     st.markdown('<div class="btn-red">', unsafe_allow_html=True)
     if st.button("Sign Out", key="signout"):
@@ -381,46 +382,149 @@ with st.sidebar:
         st.rerun()
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-# ── Helper: run biometric auth ────────────────────────────────────────────────
+                                                                                
 def run_biometric_auth():
     """
-    Runs face verification + fingerprint check.
-    Returns (face_embedding_bytes, fingerprint_bytes, similarity_score, liveness_passed)
+    Runs real-time face verification + fingerprint check.
+    Returns (face_embedding_bytes, fingerprint_bytes, similarity_score, liveness_passed, error_message)
     using BQES-compatible formats.
+
+    This function NEVER fakes a result. If the camera cannot open, face
+    cannot be detected, or similarity is below threshold, it returns a
+    failure with a descriptive error_message.
     """
+    SIMILARITY_THRESHOLD = 0.45
+
     face_path = FACE_DIR / f"{username}_embedding.npy"
     if not face_path.exists():
-        return None, None, 0.0, False
+        return None, None, 0.0, False, (
+            f"No enrolled face template found for '{username}'. "
+            "Please complete biometric enrollment first (Enrollment → Step 01)."
+        )
 
-    enrolled_emb = np.load(face_path)
-    fp_token = users.get(username, {}).get("fingerprint_token", "demo_token")
+    try:
+        enrolled_emb = np.load(face_path)
+    except Exception as e:
+        return None, None, 0.0, False, f"Failed to load enrolled template: {e}"
+
+    fp_token = users.get(username, {}).get("fingerprint_token", "")
+    if not fp_token:
+        return None, None, 0.0, False, (
+            "No fingerprint token found. Please complete fingerprint enrollment first "
+            "(Enrollment → Step 02)."
+        )
+
+    try:
+        import cv2
+    except ImportError:
+        return None, None, 0.0, False, (
+            "OpenCV (cv2) is not installed. Cannot access camera. "
+            "Run: pip install opencv-python"
+        )
+
+    cap = None
+    camera_opened = False
+    for cam_idx in range(3):
+        cap = cv2.VideoCapture(cam_idx)
+        if cap is not None and cap.isOpened():
+            camera_opened = True
+            break
+        if cap is not None:
+            cap.release()
+            cap = None
+
+    if not camera_opened or cap is None:
+        return None, None, 0.0, False, (
+            "Cannot access camera. Possible reasons:\n"
+            "• No webcam is connected to this device.\n"
+            "• Another application (Zoom, Teams, OBS, etc.) is using the camera.\n"
+            "• Camera permissions are blocked — check Windows Settings → Privacy → Camera.\n"
+            "• The camera driver is not installed or is malfunctioning.\n"
+            "Please close other camera apps and try again."
+        )
+
+    frames_captured = []
+    try:
+        for _ in range(5):
+            ret, frame = cap.read()
+            if ret and frame is not None and frame.size > 0:
+                frames_captured.append(frame)
+            time.sleep(0.1)
+    finally:
+        cap.release()
+
+    if not frames_captured:
+        return None, None, 0.0, False, (
+            "Camera opened but failed to capture any frames. Possible reasons:\n"
+            "• The camera may not be ready yet (try again in a moment).\n"
+            "• The camera lens might be covered or obstructed.\n"
+            "• Insufficient USB bandwidth or a hardware issue."
+        )
+
+    best_frame = frames_captured[-1]
 
     try:
         from deepface import DeepFace
-        import cv2
-        cap = cv2.VideoCapture(0)
-        ret, frame = cap.read()
-        cap.release()
-        if ret:
-            result = DeepFace.represent(frame, model_name="ArcFace", enforce_detection=False)
-            live_emb = np.array(result[0]["embedding"], dtype=np.float32)
-            live_emb /= np.linalg.norm(live_emb)
-            sim = float(np.dot(enrolled_emb, live_emb))
-        else:
-            sim = 0.92   # Demo fallback
-            live_emb = enrolled_emb + np.random.randn(512).astype(np.float32) * 0.05
-    except Exception:
-        sim = 0.92
-        live_emb = enrolled_emb + np.random.randn(512).astype(np.float32) * 0.05
+    except ImportError:
+        return None, None, 0.0, False, (
+            "DeepFace library is not installed. Cannot perform face recognition. "
+            "Run: pip install deepface"
+        )
 
-    # BQES seed derivation
+    try:
+        result = DeepFace.represent(
+            best_frame,
+            model_name="ArcFace",
+            enforce_detection=True
+        )
+        if not result or len(result) == 0:
+            return None, None, 0.0, False, (
+                "No face detected in the captured frame. Please ensure:\n"
+                "• Your face is clearly visible and centered in the camera.\n"
+                "• There is adequate lighting (avoid strong backlighting).\n"
+                "• Remove masks, sunglasses, or anything obstructing your face."
+            )
+        live_emb = np.array(result[0]["embedding"], dtype=np.float32)
+    except Exception as face_err:
+        err_str = str(face_err).lower()
+        if "face" in err_str and ("detect" in err_str or "found" in err_str or "could not" in err_str):
+            return None, None, 0.0, False, (
+                "No face detected in the captured frame. Please ensure:\n"
+                "• Your face is clearly visible and centered in the camera.\n"
+                "• There is adequate lighting (avoid strong backlighting).\n"
+                "• Remove masks, sunglasses, or anything obstructing your face."
+            )
+        return None, None, 0.0, False, f"Face recognition error: {face_err}"
+
+    norm = np.linalg.norm(live_emb)
+    if norm > 0:
+        live_emb /= norm
+
+    enrolled_norm = np.linalg.norm(enrolled_emb)
+    if enrolled_norm > 0:
+        enrolled_normed = enrolled_emb / enrolled_norm
+    else:
+        enrolled_normed = enrolled_emb
+
+    sim = float(np.dot(enrolled_normed, live_emb))
+
     face_seed = hashlib.sha3_512(enrolled_emb.astype(np.float32).tobytes()).digest()
     fp_seed   = hashlib.sha3_512(fp_token.encode() if isinstance(fp_token, str) else fp_token).digest()
 
-    liveness = sim >= 0.6
-    return face_seed, fp_seed, sim, liveness
+    if sim < SIMILARITY_THRESHOLD:
+        return None, None, sim, False, (
+            f"Face verification FAILED — similarity {sim:.4f} is below threshold "
+            f"({SIMILARITY_THRESHOLD}). This means the live face does not match "
+            f"the enrolled template for '{username}'. If this is you, try:\n"
+            "• Better lighting conditions.\n"
+            "• Repositioning your face to match your enrollment pose.\n"
+            "• Re-enrolling if your appearance has changed significantly."
+        )
 
-# ── Helper: run full QKD session ──────────────────────────────────────────────
+    liveness = True
+    return face_seed, fp_seed, sim, liveness, None
+
+                                                                                
 def run_qkd_session(face_seed, fp_seed):
     """
     Runs BB84 with BQES + QNLD and returns (aes_key, salt, bb84_result).
@@ -446,7 +550,7 @@ def run_qkd_session(face_seed, fp_seed):
         return aes_key, salt, result
 
     except ImportError:
-        # Demo mode
+                   
         import secrets as sec
         aes_key = sec.token_bytes(32)
         salt    = sec.token_bytes(16)
@@ -463,9 +567,9 @@ def run_qkd_session(face_seed, fp_seed):
 
         return aes_key, salt, DemoResult()
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ── PAGE: Dashboard ──────────────────────────────────────────────────────────
-# ─────────────────────────────────────────────────────────────────────────────
+                                                                               
+                                                                               
+                                                                               
 if st.session_state.current_page == "Dashboard":
 
     st.markdown("""
@@ -483,7 +587,7 @@ if st.session_state.current_page == "Dashboard":
             st.session_state.current_page = "Enrollment"
             st.rerun()
 
-    # Metrics row
+                 
     qber = st.session_state.qber_history[-1] if st.session_state.qber_history else None
     kfp  = st.session_state.key_fingerprint or "—"
 
@@ -551,16 +655,16 @@ if st.session_state.current_page == "Dashboard":
         """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Recent log
+                    
         if st.session_state.session_log:
             st.markdown('<div class="qcard"><div class="card-title">◈ Recent Activity</div>', unsafe_allow_html=True)
             for entry in reversed(st.session_state.session_log[-5:]):
                 st.markdown(f'<div class="log-entry"><span class="ts">[{entry["ts"]}]</span> <span class="{entry["level"]}">{entry["msg"]}</span></div>', unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ── PAGE: Encrypt & Send ─────────────────────────────────────────────────────
-# ─────────────────────────────────────────────────────────────────────────────
+                                                                               
+                                                                               
+                                                                               
 elif st.session_state.current_page == "Encrypt & Send":
 
     st.markdown("""
@@ -575,7 +679,7 @@ elif st.session_state.current_page == "Encrypt & Send":
     col1, col2 = st.columns([1.2, 1])
 
     with col1:
-        # Step 1: Biometric Auth
+                                
         st.markdown('<div class="qcard"><div class="card-title">◈ Step 01 — Live Authentication (BQES + QNLD)</div>', unsafe_allow_html=True)
 
         auth_state = st.session_state.get("sender_auth_done", False)
@@ -599,7 +703,7 @@ elif st.session_state.current_page == "Encrypt & Send":
             key="sender_auth"
         ):
             with st.spinner("Capturing face · Verifying fingerprint · Running QNLD..."):
-                face_seed, fp_seed, sim, liveness = run_biometric_auth()
+                face_seed, fp_seed, sim, liveness, err_msg = run_biometric_auth()
                 if face_seed and liveness:
                     st.session_state.sender_auth_done = True
                     st.session_state.sender_face_seed = face_seed
@@ -608,7 +712,7 @@ elif st.session_state.current_page == "Encrypt & Send":
                     st.session_state.sender_liveness  = liveness
                     st.session_state.sender_seed_fp   = hashlib.sha256(face_seed).hexdigest()
                     st.session_state.liveness_passed  = liveness
-                    # ─ Activate continuous auth monitor ─
+                                                          
                     st.session_state.cont_auth_active     = True
                     st.session_state.cont_auth_last_check = time.time()
                     st.session_state.cont_auth_sim        = sim
@@ -619,16 +723,20 @@ elif st.session_state.current_page == "Encrypt & Send":
                     time.sleep(0.3)
                     st.rerun()
                 else:
-                    st.error("✗  Authentication failed. Ensure you are enrolled and clearly visible.")
-                    add_log("Auth FAILED — liveness rejected", "err")
+                    st.error(f"✗  Authentication failed.")
+                    if err_msg:
+                        st.warning(err_msg)
+                    if sim > 0:
+                        st.info(f"Similarity score: {sim:.4f} (threshold: 0.45)")
+                    add_log(f"Auth FAILED — {err_msg or 'liveness rejected'}", "err")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # ── Continuous Auth Monitor (active after Step 1) ──
+                                                             
         if auth_state:
             _continuous_auth_widget("sender")
 
-        # Step 2: File upload
+                             
         st.markdown('<div class="qcard"><div class="card-title">◈ Step 02 — Select File</div>', unsafe_allow_html=True)
         uploaded_file = st.file_uploader(
             "Choose file to encrypt",
@@ -646,7 +754,7 @@ elif st.session_state.current_page == "Encrypt & Send":
             """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Step 3: Encrypt
+                         
         st.markdown('<div class="qcard qcard-green"><div class="card-title card-title-green">◈ Step 03 — BB84 Key Exchange &amp; Encrypt</div>', unsafe_allow_html=True)
 
         ready = st.session_state.get("sender_auth_done") and uploaded_file and not st.session_state.cont_auth_blocked
@@ -676,7 +784,7 @@ elif st.session_state.current_page == "Encrypt & Send":
             status.markdown('<div class="mono-info">Fusing QKD key with biometrics (HKDF)...</div>', unsafe_allow_html=True)
             time.sleep(0.3)
 
-            # Encrypt the file
+                              
             try:
                 from aes_crypto import AESCrypto
                 import zlib
@@ -698,11 +806,11 @@ elif st.session_state.current_page == "Encrypt & Send":
                 enc_result = crypto.encrypt(payload)
                 inner = enc_result['nonce'] + enc_result['tag'] + enc_result['ciphertext']
 
-                # ── Key bundle header (prepended to .enc file) ────────────────
-                # In a real QKD system the receiver independently derives the
-                # same key via the quantum channel.  In this prototype we embed
-                # the key so the full encrypt/decrypt cycle can be demonstrated
-                # across two machines.  Biometric auth still gates all access.
+                                                                                
+                                                                             
+                                                                               
+                                                                               
+                                                                              
                 import json as _json2
                 kb = _json2.dumps({"key": aes_key.hex(), "salt": salt.hex()}).encode()
                 kb_len = len(kb).to_bytes(4, 'big')
@@ -738,8 +846,8 @@ elif st.session_state.current_page == "Encrypt & Send":
                 key="download_enc"
             )
 
-            # ── Share directly to receiver via backend relay ──
-            # Sender must select which receiver this file is for.
+                                                                
+                                                                 
             _rcv_list = load_receiver_usernames()
             if not _rcv_list:
                 st.warning("⚠  No receiver accounts found. Register a receiver user first.")
@@ -783,7 +891,7 @@ elif st.session_state.current_page == "Encrypt & Send":
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
-        # BB84 stats panel
+                          
         st.markdown('<div class="qcard qcard-purple"><div class="card-title card-title-purple">◈ BB84 Session Stats</div>', unsafe_allow_html=True)
 
         if st.session_state.qber_history:
@@ -809,7 +917,7 @@ elif st.session_state.current_page == "Encrypt & Send":
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Innovation indicators
+                               
         st.markdown('<div class="qcard"><div class="card-title">◈ Innovation Indicators</div>', unsafe_allow_html=True)
         inno1 = "badge-green" if st.session_state.get("sender_auth_done") else "badge-gray"
         inno2 = "badge-green" if st.session_state.get("sender_liveness") else "badge-gray"
@@ -824,9 +932,9 @@ elif st.session_state.current_page == "Encrypt & Send":
         """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ── PAGE: Decrypt & Receive ──────────────────────────────────────────────────
-# ─────────────────────────────────────────────────────────────────────────────
+                                                                               
+                                                                               
+                                                                               
 elif st.session_state.current_page == "Decrypt & Receive":
 
     st.markdown("""
@@ -853,14 +961,14 @@ elif st.session_state.current_page == "Decrypt & Receive":
             key="recv_auth_btn"
         ):
             with st.spinner("Verifying identity..."):
-                face_seed, fp_seed, sim, liveness = run_biometric_auth()
+                face_seed, fp_seed, sim, liveness, err_msg = run_biometric_auth()
                 if face_seed and liveness:
                     st.session_state.receiver_auth_done = True
                     st.session_state.receiver_face_seed = face_seed
                     st.session_state.receiver_fp_seed   = fp_seed
                     st.session_state.receiver_sim       = sim
                     st.session_state.liveness_passed    = liveness
-                    # ─ Activate continuous auth monitor ─
+                                                          
                     st.session_state.cont_auth_active     = True
                     st.session_state.cont_auth_last_check = time.time()
                     st.session_state.cont_auth_sim        = sim
@@ -871,18 +979,22 @@ elif st.session_state.current_page == "Decrypt & Receive":
                     time.sleep(0.3)
                     st.rerun()
                 else:
-                    st.error("✗  Authentication failed.")
-                    add_log("Receiver auth FAILED", "err")
+                    st.error(f"✗  Authentication failed.")
+                    if err_msg:
+                        st.warning(err_msg)
+                    if sim > 0:
+                        st.info(f"Similarity score: {sim:.4f} (threshold: 0.45)")
+                    add_log(f"Receiver auth FAILED — {err_msg or 'liveness rejected'}", "err")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # ── Continuous Auth Monitor (active after Step 1) ──
+                                                             
         if recv_auth:
             _continuous_auth_widget("receiver")
 
         st.markdown('<div class="qcard"><div class="card-title">◈ Step 02 — Upload Encrypted File</div>', unsafe_allow_html=True)
 
-        # ── Fetch from relay server ──
+                                       
         try:
             import requests as _req
             _sr = _req.get(
@@ -935,10 +1047,10 @@ elif st.session_state.current_page == "Decrypt & Receive":
         else:
             st.info("ℹ  No file currently shared for you. Ask the sender to share an encrypted file with your account.")
 
-        # Manual upload fallback
+                                
         enc_upload = st.file_uploader("Or upload .enc file manually", key="dec_file_upload", type=["enc"])
 
-        # Prefer fetched file over manual upload
+                                                
         if st.session_state.get("fetched_enc_bytes") and not enc_upload:
             import io
             enc_upload = type('_FakeUpload', (), {
@@ -969,7 +1081,7 @@ elif st.session_state.current_page == "Decrypt & Receive":
             status.markdown('<div class="mono-info">Reading key bundle from encrypted file...</div>', unsafe_allow_html=True)
             progress.progress(20)
 
-            # ── Extract key bundle from file header ───────────────────────────
+                                                                                
             try:
                 import json as _json
                 raw_enc = enc_upload.getvalue()
@@ -977,7 +1089,7 @@ elif st.session_state.current_page == "Decrypt & Receive":
                 kb      = _json.loads(raw_enc[4:4+kb_len])
                 aes_key = bytes.fromhex(kb["key"])
                 salt    = bytes.fromhex(kb["salt"])
-                enc_data = raw_enc[4+kb_len:]          # the actual ciphertext
+                enc_data = raw_enc[4+kb_len:]                                 
                 st.session_state.key_fingerprint = hashlib.sha256(aes_key).hexdigest()[:16]
                 status.markdown('<div class="mono-info">Key bundle verified. Decrypting...</div>', unsafe_allow_html=True)
                 progress.progress(50)
@@ -1009,11 +1121,11 @@ elif st.session_state.current_page == "Decrypt & Receive":
                 add_log(f"Decrypted '{orig_name}' — key={st.session_state.key_fingerprint}", "ok")
 
             except ImportError:
-                # Demo mode fallback (no aes_crypto installed)
+                                                              
                 import json as _j2
                 raw_enc2 = enc_upload.getvalue()
                 kb2_len  = int.from_bytes(raw_enc2[:4], 'big')
-                inner    = raw_enc2[4+kb2_len+28:]     # skip kb header + nonce+tag
+                inner    = raw_enc2[4+kb2_len+28:]                                 
                 st.session_state.decrypted_bytes = inner
                 st.session_state.decrypted_name  = enc_upload.name.replace(".enc", "")
                 progress.progress(100)
@@ -1058,9 +1170,9 @@ elif st.session_state.current_page == "Decrypt & Receive":
             st.markdown('<div class="mono-info">No sessions yet.</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ── PAGE: Live Auth Monitor ──────────────────────────────────────────────────
-# ─────────────────────────────────────────────────────────────────────────────
+                                                                               
+                                                                               
+                                                                               
 elif st.session_state.current_page == "Live Auth Monitor":
 
     st.markdown("""
@@ -1119,7 +1231,7 @@ elif st.session_state.current_page == "Live Auth Monitor":
         """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # QBER chart
+                
     if st.session_state.qber_history:
         st.markdown('<div class="qcard"><div class="card-title">◈ QBER History</div>', unsafe_allow_html=True)
         import pandas as pd
@@ -1135,9 +1247,9 @@ elif st.session_state.current_page == "Live Auth Monitor":
         """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ── PAGE: Session Log ────────────────────────────────────────────────────────
-# ─────────────────────────────────────────────────────────────────────────────
+                                                                               
+                                                                               
+                                                                               
 elif st.session_state.current_page == "Session Log":
 
     st.markdown("""
@@ -1194,9 +1306,9 @@ elif st.session_state.current_page == "Session Log":
         </div>
         """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ── PAGE: Enrollment ─────────────────────────────────────────────────────────
-# ─────────────────────────────────────────────────────────────────────────────
+                                                                               
+                                                                               
+                                                                               
 elif st.session_state.current_page == "Enrollment":
 
     FACE_DIR = Path("data/face_templates")
@@ -1219,7 +1331,7 @@ elif st.session_state.current_page == "Enrollment":
     </div>
     """, unsafe_allow_html=True)
 
-    # Load current state
+                        
     _eu_users  = load_users()
     face_path  = FACE_DIR / f"{username}_embedding.npy"
     face_done  = face_path.exists()
@@ -1227,7 +1339,7 @@ elif st.session_state.current_page == "Enrollment":
     steps_done = sum([face_done, fp_done])
     pct        = int(steps_done / 2 * 100)
 
-    # Progress card
+                   
     st.markdown(f"""
     <div class="qcard">
         <div class="card-title">◈ Enrollment Progress</div>
@@ -1256,7 +1368,7 @@ elif st.session_state.current_page == "Enrollment":
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Face enrollment ───────────────────────────────────────────────────────
+                                                                                
     st.markdown('<div class="qcard"><div class="card-title">◈ Step 01 — Face Enrollment</div>', unsafe_allow_html=True)
 
     if face_done:
@@ -1326,7 +1438,7 @@ elif st.session_state.current_page == "Enrollment":
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Fingerprint enrollment ────────────────────────────────────────────────
+                                                                                
     st.markdown('<div class="qcard"><div class="card-title">◈ Step 02 — Fingerprint Enrollment</div>', unsafe_allow_html=True)
 
     if fp_done:
@@ -1386,7 +1498,7 @@ elif st.session_state.current_page == "Enrollment":
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Finalise ──────────────────────────────────────────────────────────────
+                                                                                
     if face_done and fp_done:
         st.markdown('<div class="qcard qcard-green"><div class="card-title card-title-green">◈ Finalise Enrollment</div>', unsafe_allow_html=True)
         already_enrolled = _eu_users.get(username, {}).get("enrolled", False)

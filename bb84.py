@@ -32,9 +32,9 @@ logger = logging.getLogger(__name__)
 LIVENESS_PROFILE_DIR = Path("data/liveness_profiles")
 LIVENESS_PROFILE_DIR.mkdir(parents=True, exist_ok=True)
 
-SYNTHETIC_EAVESDROP_RATE = 0.05   # 5% controlled injection for liveness probing
-LIVENESS_DEVIATION_THRESHOLD = 0.03  # Max allowed deviation from enrolled profile
-MIN_PROFILE_SESSIONS = 3           # Sessions needed before liveness enforcement
+SYNTHETIC_EAVESDROP_RATE = 0.05                                                 
+LIVENESS_DEVIATION_THRESHOLD = 0.03                                               
+MIN_PROFILE_SESSIONS = 3                                                        
 
 
 @dataclass
@@ -47,10 +47,10 @@ class BB84Result:
     final_key_length: int
     sender_bases: List[int]
     receiver_bases: List[int]
-    # INNOVATION 1: whether biometric seed was used
+                                                   
     biometric_seeded: bool = False
     biometric_seed_fingerprint: Optional[str] = None
-    # INNOVATION 2: liveness check result
+                                         
     liveness_passed: Optional[bool] = None
     liveness_deviation: Optional[float] = None
     quantum_noise_profile: Optional[float] = None
@@ -81,7 +81,7 @@ class LivenessProfile:
         enrolled profile. Returns (passed, deviation).
         """
         if self.session_count < MIN_PROFILE_SESSIONS:
-            # Not enough data yet — pass but keep recording
+                                                           
             return True, 0.0
         deviation = abs(error_rate - self.mean_error_rate)
         passed = deviation <= LIVENESS_DEVIATION_THRESHOLD
@@ -132,16 +132,16 @@ class BB84Protocol:
     with optional synthetic eavesdrop injection for liveness profiling.
     """
 
-    RECTILINEAR = 0  # + basis: 0° = 0, 90° = 1
-    DIAGONAL = 1     # x basis: 45° = 0, 135° = 1
+    RECTILINEAR = 0                            
+    DIAGONAL = 1                                 
 
     def __init__(self, key_length: int = 256):
         self.key_length = key_length
         self.error_threshold = 0.15
 
-    # ─────────────────────────────────────────────
-    # INNOVATION 1: Biometric Quantum Entropy Seeding
-    # ─────────────────────────────────────────────
+                                                   
+                                                     
+                                                   
 
     @staticmethod
     def derive_biometric_seed(
@@ -169,11 +169,11 @@ class BB84Protocol:
             combined += fingerprint_token
 
         if not combined:
-            # No biometric data — fall back to random seed (no BQES)
+                                                                    
             seed_bytes = secrets.token_bytes(64)
             return seed_bytes, "random-fallback"
 
-        seed_bytes = hashlib.sha3_512(combined).digest()   # 64 bytes
+        seed_bytes = hashlib.sha3_512(combined).digest()             
         fingerprint_hex = seed_bytes.hex()[:16]
         logger.info(f"[BQES] Biometric seed derived: ...{fingerprint_hex}")
         return seed_bytes, fingerprint_hex
@@ -199,10 +199,10 @@ class BB84Protocol:
         Returns:
             (bits, bases)
         """
-        # Bits: still truly random (security-critical, must NOT be biometric)
+                                                                             
         bits = [secrets.randbelow(2) for _ in range(self.key_length * 4)]
 
-        # Bases: seeded from biometric (identity-binding step)
+                                                              
         seed_int = int.from_bytes(biometric_seed[:4], 'big')
         rng = np.random.default_rng(seed_int)
         bases = rng.integers(0, 2, size=self.key_length * 4).tolist()
@@ -219,9 +219,9 @@ class BB84Protocol:
         bases = [secrets.randbelow(2) for _ in range(self.key_length * 4)]
         return bits, bases
 
-    # ─────────────────────────────────────────────
-    # Core BB84 transmission and sifting
-    # ─────────────────────────────────────────────
+                                                   
+                                        
+                                                   
 
     def simulate_quantum_transmission(
         self,
@@ -246,22 +246,22 @@ class BB84Protocol:
 
         for i, (bit, basis) in enumerate(zip(bits, bases)):
 
-            # Real eavesdrop simulation
+                                       
             if eavesdrop and secrets.randbelow(4) == 0:
                 eve_basis = secrets.randbelow(2)
                 if eve_basis != basis:
                     bit = secrets.randbelow(2)
 
-            # INNOVATION 2: Synthetic controlled eavesdrop for liveness probing
-            # Inject errors at a fixed known rate so the receiver's error profile
-            # can be compared against the user's enrolled quantum noise fingerprint.
+                                                                               
+                                                                                 
+                                                                                    
             if synthetic_eavesdrop_rate > 0:
                 if secrets.randbelow(1000) < int(synthetic_eavesdrop_rate * 1000):
                     probe_basis = secrets.randbelow(2)
                     if probe_basis != basis:
                         bit = secrets.randbelow(2)
 
-            # Bob's measurement
+                               
             if receiver_bases[i] == basis:
                 measured_bits.append(bit)
             else:
@@ -307,9 +307,9 @@ class BB84Protocol:
         byte_array = int(bit_string, 2).to_bytes(len(bit_string) // 8, 'big')
         return hashlib.sha256(byte_array).digest()
 
-    # ─────────────────────────────────────────────
-    # INNOVATION 2: Quantum Noise Liveness Detection
-    # ─────────────────────────────────────────────
+                                                   
+                                                    
+                                                   
 
     def check_liveness(
         self,
@@ -360,9 +360,9 @@ class BB84Protocol:
 
         return passed, deviation, profile
 
-    # ─────────────────────────────────────────────
-    # Main key generation — BQES + QNLD integrated
-    # ─────────────────────────────────────────────
+                                                   
+                                                  
+                                                   
 
     def generate_key(
         self,
@@ -387,7 +387,7 @@ class BB84Protocol:
         """
         logger.info("Starting BB84 key generation (BQES + QNLD)...")
 
-        # ── INNOVATION 1: Derive biometric seed ──────────────────────────────
+                                                                               
         biometric_seeded = False
         biometric_seed_fingerprint = None
 
@@ -402,7 +402,7 @@ class BB84Protocol:
             sender_bits, sender_bases = self.generate_sender_data()
             logger.info("[BQES] No biometric data — using random bases (fallback)")
 
-        # ── INNOVATION 2: Inject synthetic eavesdrop for liveness probe ───────
+                                                                                
         synthetic_rate = SYNTHETIC_EAVESDROP_RATE if (enable_liveness_check and user_id) else 0.0
 
         receiver_bits, receiver_bases = self.simulate_quantum_transmission(
@@ -411,7 +411,7 @@ class BB84Protocol:
             synthetic_eavesdrop_rate=synthetic_rate
         )
 
-        # ── Key sifting ───────────────────────────────────────────────────────
+                                                                                
         sifted_sender, sifted_receiver = self.sift_key(
             sender_bits, sender_bases, receiver_bits, receiver_bases
         )
@@ -421,12 +421,12 @@ class BB84Protocol:
         if raw_key_length < self.key_length:
             raise ValueError(f"Insufficient sifted key length: {raw_key_length}")
 
-        # ── Error rate estimation ─────────────────────────────────────────────
+                                                                                
         error_rate = self.estimate_error_rate(sifted_sender, sifted_receiver)
         logger.info(f"Estimated QBER: {error_rate:.4f}")
 
-        # ── Real eavesdropping detection ──────────────────────────────────────
-        # Subtract the known synthetic injection before comparing to threshold
+                                                                                
+                                                                              
         adjusted_error_rate = max(0.0, error_rate - synthetic_rate)
         eavesdropping_detected = adjusted_error_rate > self.error_threshold
         if eavesdropping_detected:
@@ -434,7 +434,7 @@ class BB84Protocol:
         else:
             logger.info("[BB84] No eavesdropping detected")
 
-        # ── INNOVATION 2: Quantum noise liveness check ────────────────────────
+                                                                                
         liveness_passed = None
         liveness_deviation = None
 
@@ -450,7 +450,7 @@ class BB84Protocol:
                     f"Possible replay/spoof attack."
                 )
 
-        # ── Privacy amplification → final key ────────────────────────────────
+                                                                               
         undisclosed_bits = sifted_sender[self.key_length // 4:]
         final_key = self.privacy_amplification(undisclosed_bits[:self.key_length])
         logger.info(f"Final key generated: {len(final_key)} bytes")
